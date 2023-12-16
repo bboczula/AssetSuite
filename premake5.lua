@@ -3,6 +3,7 @@ workspace "AssetSuite"
     configurations { "Debug", "Release" }
 	system "Windows"
     architecture "x86_64"
+	location "build" 
 	group "UnitTests"
 		project "UnitTest"
 	group "AssetSuite"
