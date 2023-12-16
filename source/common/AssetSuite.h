@@ -40,7 +40,8 @@ namespace AssetSuite
 	enum class ASSET_SUITE_EXPORTS ErrorCode
 	{
 		OK,
-		ColorTypeNotSupported
+		ColorTypeNotSupported,
+		Undefined
 	};
 
 	struct ASSET_SUITE_EXPORTS MeshDescriptor
@@ -62,18 +63,12 @@ namespace AssetSuite
 		/// <returns>A pointer to a decoded image in the local memory as consecutive bytes</returns>
 		ErrorCode LoadImageFromFile(const char* filePathAndName, ImageDescriptor& imageDescriptor, std::vector<BYTE>& output);
 
-		// This will load an image from the local memory, which would be useful for testing
-		// This function will also translate that buffer using appropriate decoder
-		BYTE* LoadImageFromMemory(BYTE* buffer, ImageDescriptor& imageDescriptor, const ImageDecoders& decoder);
-
 		// This function would take the buffer that represents the image from local memory
 		// And will store them on the hard drive
 		// This is the RAW image, meaning it has been stripped from any metadata
 		void StoreImageToFile(const std::string& filePathAndName, const std::vector<BYTE>& buffer, const ImageDescriptor& imageDescriptor);
 
 		BYTE* LoadMeshFromFile(const std::string& filePathAndName, MeshDescriptor& meshDescriptor);
-
-		BYTE* LoadMeshFromMemory(BYTE* buffer, MeshDescriptor& mashDescriptor, const MeshDecoders& decoder);
 
 		void StoreMeshToFile(const std::string& filePathAndName, BYTE* buffer, const MeshDescriptor& imageDescriptor);
 	private:
