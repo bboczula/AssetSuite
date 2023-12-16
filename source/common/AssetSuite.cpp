@@ -81,16 +81,6 @@ AssetSuite::ErrorCode AssetSuite::Manager::LoadImageFromFile(const char* filePat
       return result;
 }
 
-BYTE* AssetSuite::Manager::LoadImageFromMemory(BYTE* buffer, ImageDescriptor& imageDescriptor, const ImageDecoders& decoder)
-{
-      return nullptr;
-}
-
-BYTE* AssetSuite::Manager::LoadMeshFromMemory(BYTE* buffer, MeshDescriptor& mashDescriptor, const MeshDecoders& decoder)
-{
-      return nullptr;
-}
-
 void AssetSuite::Manager::StoreMeshToFile(const std::string& filePathAndName, BYTE* buffer, const MeshDescriptor& imageDescriptor)
 {
 }
