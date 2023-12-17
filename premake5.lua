@@ -4,7 +4,7 @@
 CREATE_LIB_DIRECTORY = "{MKDIR} %{cfg.targetdir}/../lib"
 CREATE_INC_DIRECTORY = "{MKDIR} %{cfg.targetdir}/../inc"
 COPY_LIB_FILE = "{COPY} %{cfg.targetdir}/AssetSuite.lib %{cfg.targetdir}/../lib"
-COPY_HEADER_FILE = "{COPY} %{cfg.targetdir}/../../../source/common/AssetSuite.h %{cfg.targetdir}/../inc"
+COPY_HEADER_FILES = "{COPY} %{cfg.targetdir}/../../../source/common/*.h %{cfg.targetdir}/../inc"
 LOCATION_DIRECTORY_NAME = "build"
 
 -- Global Functions
@@ -56,7 +56,7 @@ project "AssetSuite"
 		CREATE_LIB_DIRECTORY,
 		CREATE_INC_DIRECTORY,
 		COPY_LIB_FILE,
-		COPY_HEADER_FILE
+		COPY_HEADER_FILES
 	}
     files {
 		"source/common/**.h", "source/common/**.cpp"
