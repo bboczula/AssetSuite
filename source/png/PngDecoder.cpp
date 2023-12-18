@@ -6,6 +6,10 @@
 
 AssetSuite::DecoderError AssetSuite::PngDecoder::Decode(std::vector<BYTE>& output, BYTE* buffer, ImageDescriptor& descriptor)
 {
+	// Reset the buffers in case you  are reading multiple files
+	scanlines.clear();
+	compressedDataBuffer.clear();
+
 	// First 8 bytes is the signature, followed by chunks
 	//size_t totalSize = sizeof(BYTE) * 8;
 	BYTE pngSignature[8];
