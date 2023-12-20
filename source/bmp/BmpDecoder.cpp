@@ -14,6 +14,11 @@ AssetSuite::DecoderError AssetSuite::BmpDecoder::Decode(std::vector<BYTE>& outpu
 	DWORD height = infoHeader.biHeight;
 	DWORD width = infoHeader.biWidth;
 
+	// The bits representing the bitmap pixels are packed in rows, also known
+	// as strides or scan lines. The size of each row is rounded up to a multiple
+	// of 4 bytes (a 32-bit DWORD) by padding. For images with height above 1,
+	// multiple padded rows are stored consecutively, forming a PixelArray
+
 	// Calculate proper byte line width
 	// ERROR: this 8 is magic number, works only for 24-bit
 	const int MAGIC = bitsPerPixel / 8;
@@ -28,6 +33,8 @@ AssetSuite::DecoderError AssetSuite::BmpDecoder::Decode(std::vector<BYTE>& outpu
 	{
 		memcpy(output.data() + (height - 1 - i) * byteLineSize, buffer + pixelDataOffset + i * fileLineSize, byteLineSize);
 	}
+
+	// BMPs are usually stored "bottom-up"
 
 	// BMP seems to be in BGR format, not RGB, I need to revert it
 	descriptor.width = width;
