@@ -56,11 +56,24 @@ AssetSuite::ErrorCode AssetSuite::Manager::LoadImageFromFile(const char* filePat
 {
       std::filesystem::path fullName(filePathAndName);
       std::filesystem::path extension = fullName.extension();
+
+      if (!std::filesystem::exists(fullName))
+      {
+            return ErrorCode::NonExistingFile;
+      }
       LoadFileToMemory(filePathAndName);
-      //std::vector<BYTE> output;
+      
       ErrorCode result;
       if (extension.compare(".bmp") == 0)
       {
+#if 0
+            auto dumpBuffer = bypassEncoder->Encode(buffer, imageDescriptor);
+            StoreMemoryToFile(dumpBuffer, "dump.txt");
+            std::vector<BYTE> actualBuffer;
+            bmpDecoder->Decode(actualBuffer, buffer.data(), imageDescriptor);
+            auto dumpEncodedBuffer = bypassEncoder->Encode(actualBuffer, imageDescriptor);
+            StoreMemoryToFile(dumpEncodedBuffer, "expected.txt");
+#endif
             bmpDecoder->Decode(output, buffer.data(), imageDescriptor);
             result = ErrorCode::OK;
       }
@@ -73,8 +86,7 @@ AssetSuite::ErrorCode AssetSuite::Manager::LoadImageFromFile(const char* filePat
             pngDecoder->Decode(actualBuffer, buffer.data(), imageDescriptor);
             auto dumpEncodedBuffer = bypassEncoder->Encode(actualBuffer, imageDescriptor);
             StoreMemoryToFile(dumpEncodedBuffer, "expected.txt");
-#endif
-            
+#endif            
             auto error = pngDecoder->Decode(output, buffer.data(), imageDescriptor);
             result = error == DecoderError::NoDecoderError ? ErrorCode::OK : ErrorCode::ColorTypeNotSupported;
       }
