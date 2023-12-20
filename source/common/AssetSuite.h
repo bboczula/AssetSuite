@@ -39,9 +39,10 @@ namespace AssetSuite
 
 	enum class ASSET_SUITE_EXPORTS ErrorCode
 	{
-		OK,
-		ColorTypeNotSupported,
-		Undefined
+		OK = 0,
+		NonExistingFile = -1,
+		ColorTypeNotSupported = -2,
+		Undefined = -1000
 	};
 
 	struct ASSET_SUITE_EXPORTS MeshDescriptor

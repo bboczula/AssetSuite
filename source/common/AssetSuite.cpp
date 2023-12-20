@@ -57,7 +57,10 @@ AssetSuite::ErrorCode AssetSuite::Manager::LoadImageFromFile(const char* filePat
       std::filesystem::path fullName(filePathAndName);
       std::filesystem::path extension = fullName.extension();
 
-      // Here couple of things can go wrong, for instance the file might not be there
+      if (!std::filesystem::exists(fullName))
+      {
+            return ErrorCode::NonExistingFile;
+      }
       LoadFileToMemory(filePathAndName);
       
       ErrorCode result;
