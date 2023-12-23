@@ -75,9 +75,10 @@ AssetSuite::ErrorCode AssetSuite::Manager::LoadImageFromFile(const char* filePat
             StoreMemoryToFile(dumpEncodedBuffer, "expected.txt");
 #endif
             bmpDecoder->Decode(output, buffer.data(), imageDescriptor);
-            result = ErrorCode::OK;
+            return ErrorCode::OK;
       }
-      else if (extension.compare(".png") == 0)
+      
+      if (extension.compare(".png") == 0)
       {
 #if 0
             auto dumpBuffer = bypassEncoder->Encode(buffer, imageDescriptor);
@@ -88,9 +89,10 @@ AssetSuite::ErrorCode AssetSuite::Manager::LoadImageFromFile(const char* filePat
             StoreMemoryToFile(dumpEncodedBuffer, "expected.txt");
 #endif            
             auto error = pngDecoder->Decode(output, buffer.data(), imageDescriptor);
-            result = error == DecoderError::NoDecoderError ? ErrorCode::OK : ErrorCode::ColorTypeNotSupported;
+            return error == DecoderError::NoDecoderError ? ErrorCode::OK : ErrorCode::ColorTypeNotSupported;
       }
-      return result;
+
+      return AssetSuite::ErrorCode::FileTypeNotSupported;
 }
 
 void AssetSuite::Manager::StoreMeshToFile(const std::string& filePathAndName, BYTE* buffer, const MeshDescriptor& imageDescriptor)

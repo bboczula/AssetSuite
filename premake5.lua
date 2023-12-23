@@ -3,7 +3,8 @@
 -- Global Variables
 CREATE_LIB_DIRECTORY = "{MKDIR} %{cfg.targetdir}/../lib"
 CREATE_INC_DIRECTORY = "{MKDIR} %{cfg.targetdir}/../inc"
-COPY_LIB_FILE = "{COPY} %{cfg.targetdir}/AssetSuite.lib %{cfg.targetdir}/../lib"
+COPY_RELEASE_LIB_FILE = "{COPY} %{cfg.targetdir}/assetsuite_r.lib %{cfg.targetdir}/../lib"
+COPY_DEBUG_LIB_FILE = "{COPY} %{cfg.targetdir}/assetsuite_d.lib %{cfg.targetdir}/../lib"
 COPY_HEADER_FILES = "{COPY} %{cfg.targetdir}/../../../source/common/*.h %{cfg.targetdir}/../inc"
 LOCATION_DIRECTORY_NAME = "build"
 
@@ -18,7 +19,7 @@ function SetReleaseFilters()
 	filter "configurations:Release"
         defines { "NDEBUG" }
         optimize "On"
-		symbols "Off"
+		symbols "On"
 end
 
 -- Workspace
@@ -55,7 +56,6 @@ project "AssetSuite"
 	postbuildcommands {
 		CREATE_LIB_DIRECTORY,
 		CREATE_INC_DIRECTORY,
-		COPY_LIB_FILE,
 		COPY_HEADER_FILES
 	}
     files {
@@ -63,7 +63,12 @@ project "AssetSuite"
 	}
 	SetDebugFilters()
 	SetReleaseFilters()
-	
+	filter "configurations:Debug"
+		targetname "assetsuite_d"
+		postbuildcommands { COPY_DEBUG_LIB_FILE }
+	filter "configurations:Release"
+		targetname "assetsuite_r"
+		postbuildcommands { COPY_RELEASE_LIB_FILE }
 project "bmp"
 	kind "StaticLib"
 	language "C++"
@@ -120,17 +125,24 @@ project "DemoApplication"
 	targetdir "bin/%{cfg.buildcfg}/demo"
 	files { "source/demo/**.h", "source/demo/**.cpp" }
 	links { "AssetSuite" }
-	postbuildcommands {
-		"{COPY} %{cfg.targetdir}/../bin/AssetSuite.dll %{cfg.targetdir}"
-	}
 	SetDebugFilters()
 	SetReleaseFilters()
+	filter "configurations:Debug"
+		postbuildcommands { "{COPY} %{cfg.targetdir}/../bin/assetsuite_d.dll %{cfg.targetdir}" }
+	filter "configurations:Release"
+		postbuildcommands { "{COPY} %{cfg.targetdir}/../bin/assetsuite_r.dll %{cfg.targetdir}" }
 		
 project "UnitTest"
 	kind "SharedLib"
 	language "C++"
 	targetdir "bin/%{cfg.buildcfg}/tests"
 	files { "unit_tests/**.h", "unit_tests/**.cpp" }
-	links { "bmp", "png", "ppm", "wavefront", "bitstream" }
+	links { "AssetSuite", "bmp", "png", "ppm", "wavefront", "bitstream" }
 	SetDebugFilters()
 	SetReleaseFilters()
+	filter "configurations:Debug"
+		postbuildcommands { "{COPY} %{cfg.targetdir}/../bin/assetsuite_d.dll %{cfg.targetdir}" }
+		postbuildcommands { "{COPY} %{cfg.targetdir}/../../../test_images/* %{cfg.targetdir}" }
+	filter "configurations:Release"
+		postbuildcommands { "{COPY} %{cfg.targetdir}/../bin/assetsuite_r.dll %{cfg.targetdir}" }
+		postbuildcommands { "{COPY} %{cfg.targetdir}/../../../test_images/* %{cfg.targetdir}" }
