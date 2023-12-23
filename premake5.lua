@@ -35,6 +35,7 @@ workspace "AssetSuite"
 		project "UnitTest"
 	group "AssetSuite"
 		project "AssetSuite"
+		project "zlib"
 		project "bmp"
 		project "png"
 		project "ppm"
@@ -50,7 +51,7 @@ project "AssetSuite"
 	cppdialect "C++20"
     targetdir "bin/%{cfg.buildcfg}/bin"
 	defines { "ASSETSUITE_EXPORTS" }
-	links { "bmp", "png", "ppm", "bypass", "wavefront", "bitstream" }
+	links { "zlib", "bmp", "png", "ppm", "bypass", "wavefront", "bitstream" }
 	vpaths { ["Images"] = "bmp" }
 	-- Copy some files over to have a full DLL release
 	postbuildcommands {
@@ -69,10 +70,20 @@ project "AssetSuite"
 	filter "configurations:Release"
 		targetname "assetsuite_r"
 		postbuildcommands { COPY_RELEASE_LIB_FILE }
+
+project "zlib"
+	kind "StaticLib"
+	language "C++"
+	targetdir "bin/%{cfg.buildcfg}/bin"
+	files { "source/zlib/**.h", "source/zlib/**.cpp" }
+	SetDebugFilters()
+	SetReleaseFilters()
+
 project "bmp"
 	kind "StaticLib"
 	language "C++"
 	targetdir "bin/%{cfg.buildcfg}/bin"
+	links { "zlib" }
 	files { "source/bmp/**.h", "source/bmp/**.cpp" }
 	SetDebugFilters()
 	SetReleaseFilters()
@@ -137,7 +148,7 @@ project "UnitTest"
 	language "C++"
 	targetdir "bin/%{cfg.buildcfg}/tests"
 	files { "unit_tests/**.h", "unit_tests/**.cpp" }
-	links { "AssetSuite", "bmp", "png", "ppm", "wavefront", "bitstream" }
+	links { "AssetSuite", "zlib", "bmp", "png", "ppm", "wavefront", "bitstream" }
 	SetDebugFilters()
 	SetReleaseFilters()
 	filter "configurations:Debug"
