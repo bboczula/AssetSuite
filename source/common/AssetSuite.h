@@ -41,7 +41,8 @@ namespace AssetSuite
 	{
 		OK = 0,
 		NonExistingFile = -1,
-		ColorTypeNotSupported = -2,
+		FileTypeNotSupported = -2,
+		ColorTypeNotSupported = -3,
 		Undefined = -1000
 	};
 
