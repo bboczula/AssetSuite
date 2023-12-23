@@ -1,6 +1,6 @@
 #include "PngDecoder.h"
 #include <bitset>
-#include "ZLib.h"
+#include "../zlib/ZLib.h"
 
 #define ENABLE_PRINT 0
 

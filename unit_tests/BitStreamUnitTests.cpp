@@ -1,5 +1,5 @@
 #include "CppUnitTest.h"
-#include "../source/png/Huffman.h"
+//#include "../source/png/Huffman.h"
 //#include "../png/Huffman.cpp"
 #include "../source/bitstream/BitStream.h"
 //#include "../png/BitStream.cpp"
