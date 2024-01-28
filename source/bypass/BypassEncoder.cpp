@@ -19,7 +19,7 @@ std::vector<BYTE> AssetSuite::BypassEncoder::Encode(const std::vector<BYTE>& buf
 {
 	//std::vector<BYTE> input = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0xFF };
 	std::vector<BYTE> output;
-	AppendToByteBuffer(output, "std::vector<BYTE> buffer = {\n");
+	AppendToByteBuffer(output, "std::vector<BYTE> rawBuffer = {\n");
 	UINT elementsCount = 0;
 	for (auto it = buffer.begin(); it != buffer.end(); it++)
 	{

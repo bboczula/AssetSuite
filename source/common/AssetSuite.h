@@ -77,8 +77,9 @@ namespace AssetSuite
 		void LoadFileToMemory(const std::string& fileName);
 		void StoreMemoryToFile(const std::vector<BYTE>& buffer, const std::string& fileName);
 		void DumpByteVectorToCpp(const std::vector<BYTE>& byteVector);
-		std::vector<BYTE> buffer;
-		std::vector<BYTE> outputBuffer;
+		std::vector<BYTE> rawBuffer;
+		std::vector<BYTE> decodedBuffer;
+		std::vector<BYTE> formattedBuffer;
 		ModelLoader* modelLoader;
 		BmpDecoder* bmpDecoder;
 		PngDecoder* pngDecoder;
