@@ -11,7 +11,7 @@ void main()
 
 	AssetSuite::ImageDescriptor bmpImageDesc = {};
 	std::vector<BYTE> bmpResult;
-	auto errorCode = assetManager.LoadImageFromFile("paint-01-24bpp.bmp", bmpImageDesc, bmpResult);
+	auto errorCode = assetManager.LoadImageFromFile("paint-01-24bpp.png", bmpImageDesc, bmpResult);
 	if (errorCode == AssetSuite::ErrorCode::NonExistingFile)
 	{
 		std::cout << "ERROR: File doesn't exist!" << std::endl;

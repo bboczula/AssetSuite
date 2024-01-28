@@ -64,6 +64,7 @@ AssetSuite::ErrorCode AssetSuite::Manager::LoadImageFromFile(const char* filePat
       LoadFileToMemory(filePathAndName);
       
       ErrorCode result;
+      bool hasBeenProcessed = false;
       if (extension.compare(".bmp") == 0)
       {
 #if 0
@@ -74,11 +75,11 @@ AssetSuite::ErrorCode AssetSuite::Manager::LoadImageFromFile(const char* filePat
             auto dumpEncodedBuffer = bypassEncoder->Encode(actualBuffer, imageDescriptor);
             StoreMemoryToFile(dumpEncodedBuffer, "expected.txt");
 #endif
-            bmpDecoder->Decode(output, buffer.data(), imageDescriptor);
-            return ErrorCode::OK;
+            bmpDecoder->Decode(decodedBuffer, rawBuffer.data(), imageDescriptor);
+            result = ErrorCode::OK;
+            hasBeenProcessed = true;
       }
-      
-      if (extension.compare(".png") == 0)
+      else if (extension.compare(".png") == 0)
       {
 #if 0
             auto dumpBuffer = bypassEncoder->Encode(buffer, imageDescriptor);
@@ -88,11 +89,23 @@ AssetSuite::ErrorCode AssetSuite::Manager::LoadImageFromFile(const char* filePat
             auto dumpEncodedBuffer = bypassEncoder->Encode(actualBuffer, imageDescriptor);
             StoreMemoryToFile(dumpEncodedBuffer, "expected.txt");
 #endif            
-            auto error = pngDecoder->Decode(output, buffer.data(), imageDescriptor);
-            return error == DecoderError::NoDecoderError ? ErrorCode::OK : ErrorCode::ColorTypeNotSupported;
+            auto error = pngDecoder->Decode(decodedBuffer, rawBuffer.data(), imageDescriptor);
+            result = error == DecoderError::NoDecoderError ? ErrorCode::OK : ErrorCode::ColorTypeNotSupported;
+            hasBeenProcessed = true;
       }
 
-      return AssetSuite::ErrorCode::FileTypeNotSupported;
+      // Here you can do the formatting part (for now just copy)
+      output.resize(decodedBuffer.size());
+      for (int i = 0; i < decodedBuffer.size(); i++)
+      {
+            output[i] = decodedBuffer[i];
+      }
+
+      if (!hasBeenProcessed)
+      {
+            return AssetSuite::ErrorCode::FileTypeNotSupported;
+      }
+      return result;
 }
 
 void AssetSuite::Manager::StoreMeshToFile(const std::string& filePathAndName, BYTE* buffer, const MeshDescriptor& imageDescriptor)
@@ -101,14 +114,14 @@ void AssetSuite::Manager::StoreMeshToFile(const std::string& filePathAndName, BY
 
 void AssetSuite::Manager::StoreImageToFile(const std::string& filePathAndName, const std::vector<BYTE>& buffer, const ImageDescriptor& imageDescriptor)
 {
-      this->buffer = ppmEncoder->Encode(buffer, imageDescriptor);
-      StoreMemoryToFile(this->buffer, filePathAndName);
+      this->rawBuffer = ppmEncoder->Encode(buffer, imageDescriptor);
+      StoreMemoryToFile(this->rawBuffer, filePathAndName);
 }
 
 void AssetSuite::Manager::LoadFileToMemory(const std::string& fileName)
 {
       // Clear the buffer, since it might have something in it
-      buffer.clear();
+      rawBuffer.clear();
 
       //load and decode
       std::ifstream file(fileName.c_str(), std::ios::in | std::ios::binary | std::ios::ate);
@@ -142,12 +155,12 @@ void AssetSuite::Manager::LoadFileToMemory(const std::string& fileName)
       //read contents of the file into the vector
       if (size > 0)
       {
-            buffer.resize((size_t)size);
-            file.read((char*)(&buffer[0]), size);
+            rawBuffer.resize((size_t)size);
+            file.read((char*)(&rawBuffer[0]), size);
       }
       else
       {
-            buffer.clear();
+            rawBuffer.clear();
       }
 }
 
