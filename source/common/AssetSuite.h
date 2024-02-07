@@ -9,6 +9,7 @@
 
 #include <string>
 #include <vector>
+#include <filesystem>
 #include <Windows.h>
 
 #include "ImageDescriptor.h"
@@ -27,6 +28,7 @@ namespace AssetSuite
 
 	enum class ASSET_SUITE_EXPORTS ImageDecoders
 	{
+		Auto,
 		PNG,
 		BMP,
 		PPM
@@ -44,6 +46,18 @@ namespace AssetSuite
 		FileTypeNotSupported = -2,
 		ColorTypeNotSupported = -3,
 		Undefined = -1000
+	};
+
+	enum class ASSET_SUITE_EXPORTS ErrorCodeLoad
+	{
+		OK = 0,
+		FileNotExist = -1
+	};
+
+	enum class ASSET_SUITE_EXPORTS OutputFormat
+	{
+		RGB8,
+		RGBA8
 	};
 
 	struct ASSET_SUITE_EXPORTS MeshDescriptor
@@ -73,10 +87,25 @@ namespace AssetSuite
 		BYTE* LoadMeshFromFile(const std::string& filePathAndName, MeshDescriptor& meshDescriptor);
 
 		void StoreMeshToFile(const std::string& filePathAndName, BYTE* buffer, const MeshDescriptor& imageDescriptor);
+
+		ErrorCode ImageLoad(const char* filePathAndName);
+		ErrorCode ImageDecode(ImageDecoders decoder, ImageDescriptor& descriptor);
+		ErrorCode ImageGet(OutputFormat format, std::vector<BYTE>& output);
+
+		ErrorCode LoadMesh();
+		ErrorCode DecodeMesh();
+		ErrorCode GetMesh();
 	private:
-		void LoadFileToMemory(const std::string& fileName);
+		struct FileInfo
+		{
+			std::filesystem::path fullName;
+			std::filesystem::path extension;
+			bool hasBeenProcessed = false;
+		};
+		ErrorCode LoadFileToMemory(const std::string& fileName);
 		void StoreMemoryToFile(const std::vector<BYTE>& buffer, const std::string& fileName);
 		void DumpByteVectorToCpp(const std::vector<BYTE>& byteVector);
+		FileInfo fileInfo;
 		std::vector<BYTE> rawBuffer;
 		std::vector<BYTE> decodedBuffer;
 		std::vector<BYTE> formattedBuffer;
