@@ -1,7 +1,5 @@
 #include "AssetSuite.h"
 
-#include <filesystem>
-
 #include "../wavefront/ModelLoader.h"
 #include "../wavefront/Image.h"
 #include "../bmp/BmpDecoder.h"
@@ -46,26 +44,26 @@ AssetSuite::Manager::~Manager()
 	}
 }
 
-BYTE* AssetSuite::Manager::LoadMeshFromFile(const std::string& filePathAndName, MeshDescriptor& meshDescriptor)
-{
-	modelLoader->LoadFromFile(filePathAndName);
-      return nullptr;
-}
-
 AssetSuite::ErrorCode AssetSuite::Manager::LoadImageFromFile(const char* filePathAndName, ImageDescriptor& imageDescriptor, std::vector<BYTE>& output)
 {
-      std::filesystem::path fullName(filePathAndName);
-      std::filesystem::path extension = fullName.extension();
+      auto loadResult = ImageLoad(filePathAndName);
+      auto decodeResult = ImageDecode(ImageDecoders::Auto, imageDescriptor);
+      auto getResult = ImageGet(OutputFormat::RGB8, output);
+      return ErrorCode::OK;
+}
 
-      if (!std::filesystem::exists(fullName))
-      {
-            return ErrorCode::NonExistingFile;
-      }
-      LoadFileToMemory(filePathAndName);
-      
-      ErrorCode result;
-      bool hasBeenProcessed = false;
-      if (extension.compare(".bmp") == 0)
+AssetSuite::ErrorCode AssetSuite::Manager::ImageLoad(const char* filePathAndName)
+{
+      fileInfo.fullName = filePathAndName;
+      fileInfo.extension = fileInfo.fullName.extension();
+      return LoadFileToMemory(filePathAndName);
+}
+
+AssetSuite::ErrorCode AssetSuite::Manager::ImageDecode(ImageDecoders decoder, ImageDescriptor& descriptor)
+{
+      // Here we assume that the image is loaded in the rawBuffer
+      ErrorCode result = ErrorCode::Undefined;
+      if (fileInfo.extension.compare(".bmp") == 0)
       {
 #if 0
             auto dumpBuffer = bypassEncoder->Encode(buffer, imageDescriptor);
@@ -75,11 +73,11 @@ AssetSuite::ErrorCode AssetSuite::Manager::LoadImageFromFile(const char* filePat
             auto dumpEncodedBuffer = bypassEncoder->Encode(actualBuffer, imageDescriptor);
             StoreMemoryToFile(dumpEncodedBuffer, "expected.txt");
 #endif
-            bmpDecoder->Decode(decodedBuffer, rawBuffer.data(), imageDescriptor);
+            bmpDecoder->Decode(decodedBuffer, rawBuffer.data(), descriptor);
             result = ErrorCode::OK;
-            hasBeenProcessed = true;
+            fileInfo.hasBeenProcessed = true;
       }
-      else if (extension.compare(".png") == 0)
+      else if (fileInfo.extension.compare(".png") == 0)
       {
 #if 0
             auto dumpBuffer = bypassEncoder->Encode(buffer, imageDescriptor);
@@ -89,23 +87,33 @@ AssetSuite::ErrorCode AssetSuite::Manager::LoadImageFromFile(const char* filePat
             auto dumpEncodedBuffer = bypassEncoder->Encode(actualBuffer, imageDescriptor);
             StoreMemoryToFile(dumpEncodedBuffer, "expected.txt");
 #endif            
-            auto error = pngDecoder->Decode(decodedBuffer, rawBuffer.data(), imageDescriptor);
+            auto error = pngDecoder->Decode(decodedBuffer, rawBuffer.data(), descriptor);
             result = error == DecoderError::NoDecoderError ? ErrorCode::OK : ErrorCode::ColorTypeNotSupported;
-            hasBeenProcessed = true;
+            fileInfo.hasBeenProcessed = true;
       }
 
+      if (!fileInfo.hasBeenProcessed)
+      {
+            return AssetSuite::ErrorCode::FileTypeNotSupported;
+      }
+      return result;
+}
+
+AssetSuite::ErrorCode AssetSuite::Manager::ImageGet(OutputFormat format, std::vector<BYTE>& output)
+{
       // Here you can do the formatting part (for now just copy)
       output.resize(decodedBuffer.size());
       for (int i = 0; i < decodedBuffer.size(); i++)
       {
             output[i] = decodedBuffer[i];
       }
+      return ErrorCode::OK;
+}
 
-      if (!hasBeenProcessed)
-      {
-            return AssetSuite::ErrorCode::FileTypeNotSupported;
-      }
-      return result;
+BYTE* AssetSuite::Manager::LoadMeshFromFile(const std::string& filePathAndName, MeshDescriptor& meshDescriptor)
+{
+	modelLoader->LoadFromFile(filePathAndName);
+      return nullptr;
 }
 
 void AssetSuite::Manager::StoreMeshToFile(const std::string& filePathAndName, BYTE* buffer, const MeshDescriptor& imageDescriptor)
@@ -118,8 +126,14 @@ void AssetSuite::Manager::StoreImageToFile(const std::string& filePathAndName, c
       StoreMemoryToFile(this->rawBuffer, filePathAndName);
 }
 
-void AssetSuite::Manager::LoadFileToMemory(const std::string& fileName)
+AssetSuite::ErrorCode AssetSuite::Manager::LoadFileToMemory(const std::string& fileName)
 {
+      // Check if file exists
+      if (!std::filesystem::exists(fileInfo.fullName))
+      {
+            return ErrorCode::NonExistingFile;
+      }
+
       // Clear the buffer, since it might have something in it
       rawBuffer.clear();
 
@@ -162,6 +176,8 @@ void AssetSuite::Manager::LoadFileToMemory(const std::string& fileName)
       {
             rawBuffer.clear();
       }
+
+      return ErrorCode::OK;
 }
 
 void AssetSuite::Manager::StoreMemoryToFile(const std::vector<BYTE>& buffer, const std::string& fileName)
