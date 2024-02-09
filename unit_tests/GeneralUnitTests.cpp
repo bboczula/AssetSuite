@@ -21,7 +21,7 @@ namespace GeneralUnitTests
 			AssetSuite::Manager manager;
 
 			// This file needs to exist
-			auto error = manager.LoadImageFromFile("test_file.xyz", imageDescriptor, output);
+			auto error = manager.ImageLoadAndDecode("test_file.xyz", imageDescriptor);
 			Assert::AreEqual(true, AssetSuite::ErrorCode::FileTypeNotSupported == error);
 		}
 	};

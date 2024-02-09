@@ -71,27 +71,15 @@ namespace AssetSuite
 	public:
 		Manager();
 		~Manager();
-		/// <summary>
-		/// Loads image from hadr drive, decodes it and stores it in a local memory as consecutive bytes
-		/// </summary>
-		/// <param name="filePathAndName">File name, extension and path containing image to load</param>
-		/// <param name="imageDescriptor">Output structure that will contain necessary image metadata</param>
-		/// <returns>A pointer to a decoded image in the local memory as consecutive bytes</returns>
-		ErrorCode LoadImageFromFile(const char* filePathAndName, ImageDescriptor& imageDescriptor, std::vector<BYTE>& output);
-
-		// This function would take the buffer that represents the image from local memory
-		// And will store them on the hard drive
-		// This is the RAW image, meaning it has been stripped from any metadata
+		
 		void StoreImageToFile(const std::string& filePathAndName, const std::vector<BYTE>& buffer, const ImageDescriptor& imageDescriptor);
-
-		BYTE* LoadMeshFromFile(const std::string& filePathAndName, MeshDescriptor& meshDescriptor);
-
-		void StoreMeshToFile(const std::string& filePathAndName, BYTE* buffer, const MeshDescriptor& imageDescriptor);
-
+		ErrorCode ImageLoadAndDecode(const char* filePathAndName, ImageDescriptor& descriptor, ImageDecoders decoder = ImageDecoders::Auto);
 		ErrorCode ImageLoad(const char* filePathAndName);
 		ErrorCode ImageDecode(ImageDecoders decoder, ImageDescriptor& descriptor);
 		ErrorCode ImageGet(OutputFormat format, std::vector<BYTE>& output);
 
+		BYTE* LoadMeshFromFile(const std::string& filePathAndName, MeshDescriptor& meshDescriptor);
+		void StoreMeshToFile(const std::string& filePathAndName, BYTE* buffer, const MeshDescriptor& imageDescriptor);
 		ErrorCode LoadMesh();
 		ErrorCode DecodeMesh();
 		ErrorCode GetMesh();
