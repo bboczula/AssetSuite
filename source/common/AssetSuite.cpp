@@ -44,12 +44,11 @@ AssetSuite::Manager::~Manager()
 	}
 }
 
-AssetSuite::ErrorCode AssetSuite::Manager::LoadImageFromFile(const char* filePathAndName, ImageDescriptor& imageDescriptor, std::vector<BYTE>& output)
+AssetSuite::ErrorCode AssetSuite::Manager::ImageLoadAndDecode(const char* filePathAndName, ImageDescriptor& descriptor, ImageDecoders decoder)
 {
       auto loadResult = ImageLoad(filePathAndName);
-      auto decodeResult = ImageDecode(ImageDecoders::Auto, imageDescriptor);
-      auto getResult = ImageGet(OutputFormat::RGB8, output);
-      return ErrorCode::OK;
+      auto decodeResult = ImageDecode(ImageDecoders::Auto, descriptor);
+      return decodeResult;
 }
 
 AssetSuite::ErrorCode AssetSuite::Manager::ImageLoad(const char* filePathAndName)

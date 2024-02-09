@@ -11,11 +11,12 @@ void main()
 
 	AssetSuite::ImageDescriptor bmpImageDesc = {};
 	std::vector<BYTE> bmpResult;
-	auto errorCode = assetManager.LoadImageFromFile("paint-01-24bpp.png", bmpImageDesc, bmpResult);
+	auto errorCode = assetManager.ImageLoadAndDecode("paint-01-24bpp.png", bmpImageDesc);
 	if (errorCode == AssetSuite::ErrorCode::NonExistingFile)
 	{
 		std::cout << "ERROR: File doesn't exist!" << std::endl;
 		return;
 	}
+	auto getErrorCode = assetManager.ImageGet(AssetSuite::OutputFormat::RGB8, bmpResult);
 	assetManager.StoreImageToFile("output.ppm", bmpResult, bmpImageDesc);
 }
