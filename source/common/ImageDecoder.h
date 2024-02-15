@@ -12,6 +12,7 @@ namespace AssetSuite
 
 	class ImageDecoder
 	{
+	public:
 		virtual DecoderError Decode(std::vector<BYTE>& output, BYTE* buffer, ImageDescriptor& descriptor) = 0;
 	};
 }

@@ -13,6 +13,7 @@
 #include <Windows.h>
 
 #include "ImageDescriptor.h"
+#include "ImageDecoder.h"
 
 // I want to be able to easily extend the interface, so I can add new file fromats
 // Or even some custom binary files, or add JPEG or even different 3D formats
@@ -31,7 +32,8 @@ namespace AssetSuite
 		Auto,
 		PNG,
 		BMP,
-		PPM
+		PPM,
+		MaxDecoders
 	};
 
 	enum class ASSET_SUITE_EXPORTS MeshDecoders
@@ -102,5 +104,6 @@ namespace AssetSuite
 		PngDecoder* pngDecoder;
 		PpmEncoder* ppmEncoder;
 		BypassEncoder* bypassEncoder;
+		ImageDecoder* imageDecoders[(size_t)ImageDecoders::MaxDecoders];
 	};
 }
