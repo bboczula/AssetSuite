@@ -14,6 +14,9 @@ AssetSuite::Manager::Manager() : modelLoader(nullptr)
       pngDecoder = new PngDecoder;
       ppmEncoder = new PpmEncoder;
       bypassEncoder = new BypassEncoder;
+
+      imageDecoders[(size_t)ImageDecoders::BMP] = bmpDecoder;
+      imageDecoders[(size_t)ImageDecoders::PNG] = pngDecoder;
 }
 
 AssetSuite::Manager::~Manager()
@@ -60,42 +63,44 @@ AssetSuite::ErrorCode AssetSuite::Manager::ImageLoad(const char* filePathAndName
 
 AssetSuite::ErrorCode AssetSuite::Manager::ImageDecode(ImageDecoders decoder, ImageDescriptor& descriptor)
 {
-      // Here we assume that the image is loaded in the rawBuffer
-      ErrorCode result = ErrorCode::Undefined;
-      if (fileInfo.extension.compare(".bmp") == 0)
+      // Here you pick the decoder and then move on
+      if (decoder == ImageDecoders::Auto)
       {
-#if 0
-            auto dumpBuffer = bypassEncoder->Encode(buffer, imageDescriptor);
-            StoreMemoryToFile(dumpBuffer, "dump.txt");
-            std::vector<BYTE> actualBuffer;
-            bmpDecoder->Decode(actualBuffer, buffer.data(), imageDescriptor);
-            auto dumpEncodedBuffer = bypassEncoder->Encode(actualBuffer, imageDescriptor);
-            StoreMemoryToFile(dumpEncodedBuffer, "expected.txt");
-#endif
-            bmpDecoder->Decode(decodedBuffer, rawBuffer.data(), descriptor);
-            result = ErrorCode::OK;
-            fileInfo.hasBeenProcessed = true;
-      }
-      else if (fileInfo.extension.compare(".png") == 0)
-      {
-#if 0
-            auto dumpBuffer = bypassEncoder->Encode(buffer, imageDescriptor);
-            StoreMemoryToFile(dumpBuffer, "dump.txt");
-            std::vector<BYTE> actualBuffer;
-            pngDecoder->Decode(actualBuffer, buffer.data(), imageDescriptor);
-            auto dumpEncodedBuffer = bypassEncoder->Encode(actualBuffer, imageDescriptor);
-            StoreMemoryToFile(dumpEncodedBuffer, "expected.txt");
-#endif            
-            auto error = pngDecoder->Decode(decodedBuffer, rawBuffer.data(), descriptor);
-            result = error == DecoderError::NoDecoderError ? ErrorCode::OK : ErrorCode::ColorTypeNotSupported;
-            fileInfo.hasBeenProcessed = true;
+            if (fileInfo.extension.compare(".bmp") == 0)
+            {
+                  decoder = ImageDecoders::BMP;
+            }
+            else if (fileInfo.extension.compare(".png") == 0)
+            {
+                  decoder = ImageDecoders::PNG;
+            }
       }
 
+      // Here we can try to use the inheritance
+#if 0
+      auto dumpBuffer = bypassEncoder->Encode(buffer, imageDescriptor);
+      StoreMemoryToFile(dumpBuffer, "dump.txt");
+      std::vector<BYTE> actualBuffer;
+#endif
+      // bmpDecoder->Decode(actualBuffer, buffer.data(), imageDescriptor);
+      auto error = imageDecoders[(size_t)decoder]->Decode(decodedBuffer, rawBuffer.data(), descriptor);
+      ErrorCode result = error == DecoderError::NoDecoderError ? ErrorCode::OK : ErrorCode::ColorTypeNotSupported;
+      fileInfo.hasBeenProcessed = true;
+#if 0
+      auto dumpEncodedBuffer = bypassEncoder->Encode(actualBuffer, imageDescriptor);
+      StoreMemoryToFile(dumpEncodedBuffer, "expected.txt");
+#endif
+
+      // Here we decide what to do if nothing was decoded
       if (!fileInfo.hasBeenProcessed)
       {
             return AssetSuite::ErrorCode::FileTypeNotSupported;
       }
-      return result;
+      else
+      {
+            return result;
+      }
+      return ErrorCode::Undefined;
 }
 
 AssetSuite::ErrorCode AssetSuite::Manager::ImageGet(OutputFormat format, std::vector<BYTE>& output)
