@@ -63,7 +63,6 @@ AssetSuite::ErrorCode AssetSuite::Manager::ImageLoad(const char* filePathAndName
 
 AssetSuite::ErrorCode AssetSuite::Manager::ImageDecode(ImageDecoders decoder, ImageDescriptor& descriptor)
 {
-      // Here you pick the decoder and then move on
       if (decoder == ImageDecoders::Auto)
       {
             if (fileInfo.extension.compare(".bmp") == 0)
@@ -76,22 +75,10 @@ AssetSuite::ErrorCode AssetSuite::Manager::ImageDecode(ImageDecoders decoder, Im
             }
       }
 
-      // Here we can try to use the inheritance
-#if 0
-      auto dumpBuffer = bypassEncoder->Encode(buffer, imageDescriptor);
-      StoreMemoryToFile(dumpBuffer, "dump.txt");
-      std::vector<BYTE> actualBuffer;
-#endif
-      // bmpDecoder->Decode(actualBuffer, buffer.data(), imageDescriptor);
       auto error = imageDecoders[(size_t)decoder]->Decode(decodedBuffer, rawBuffer.data(), descriptor);
       ErrorCode result = error == DecoderError::NoDecoderError ? ErrorCode::OK : ErrorCode::ColorTypeNotSupported;
       fileInfo.hasBeenProcessed = true;
-#if 0
-      auto dumpEncodedBuffer = bypassEncoder->Encode(actualBuffer, imageDescriptor);
-      StoreMemoryToFile(dumpEncodedBuffer, "expected.txt");
-#endif
 
-      // Here we decide what to do if nothing was decoded
       if (!fileInfo.hasBeenProcessed)
       {
             return AssetSuite::ErrorCode::FileTypeNotSupported;
@@ -122,6 +109,20 @@ BYTE* AssetSuite::Manager::LoadMeshFromFile(const std::string& filePathAndName, 
 
 void AssetSuite::Manager::StoreMeshToFile(const std::string& filePathAndName, BYTE* buffer, const MeshDescriptor& imageDescriptor)
 {
+}
+
+AssetSuite::ErrorCode AssetSuite::Manager::DumpRawBuffer()
+{
+      ImageDescriptor descriptor;
+      DumpBuffer("rawBuffer.txt", rawBuffer, descriptor);
+      return ErrorCode::OK;
+}
+
+AssetSuite::ErrorCode AssetSuite::Manager::DumpDecodedBuffer()
+{
+      ImageDescriptor descriptor;
+      DumpBuffer("decodedBuffer.txt", decodedBuffer, descriptor);
+      return ErrorCode::OK;
 }
 
 void AssetSuite::Manager::StoreImageToFile(const std::string& filePathAndName, const std::vector<BYTE>& buffer, const ImageDescriptor& imageDescriptor)
@@ -198,4 +199,10 @@ void AssetSuite::Manager::DumpByteVectorToCpp(const std::vector<BYTE>& byteVecto
       {
             std::cout << std::hex << (UINT)*it << std::endl;
       }
+}
+
+void AssetSuite::Manager::DumpBuffer(const std::string& fileName, const std::vector<BYTE>& buffer, ImageDescriptor& descriptor)
+{
+      auto dumpBuffer = bypassEncoder->Encode(buffer, descriptor);
+      StoreMemoryToFile(dumpBuffer, fileName);
 }
