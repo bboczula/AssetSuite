@@ -85,6 +85,9 @@ namespace AssetSuite
 		ErrorCode LoadMesh();
 		ErrorCode DecodeMesh();
 		ErrorCode GetMesh();
+
+		ErrorCode DumpRawBuffer();
+		ErrorCode DumpDecodedBuffer();
 	private:
 		struct FileInfo
 		{
@@ -95,6 +98,7 @@ namespace AssetSuite
 		ErrorCode LoadFileToMemory(const std::string& fileName);
 		void StoreMemoryToFile(const std::vector<BYTE>& buffer, const std::string& fileName);
 		void DumpByteVectorToCpp(const std::vector<BYTE>& byteVector);
+		void DumpBuffer(const std::string& fileName, const std::vector<BYTE>& buffer, ImageDescriptor& descriptor);
 		FileInfo fileInfo;
 		std::vector<BYTE> rawBuffer;
 		std::vector<BYTE> decodedBuffer;
