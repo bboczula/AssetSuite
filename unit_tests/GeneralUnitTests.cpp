@@ -9,20 +9,28 @@ namespace GeneralUnitTests
 	{
 	public:
 
-		TEST_METHOD(FileExtentionNotSupported)
+		TEST_METHOD(FileExtensionNotSupported)
 		{
-			// Test Variables
-			const UINT WIDTH = 10;
-			const UINT HEIGHT = 10;
-
 			// In this test we don't need real data
 			std::vector<BYTE> output;
 			AssetSuite::ImageDescriptor imageDescriptor;
 			AssetSuite::Manager manager;
 
 			// This file needs to exist
-			auto error = manager.ImageLoadAndDecode("test_file.xyz", imageDescriptor);
+			manager.ImageLoad("test_file.xyz");
+			auto error = manager.ImageDecode(AssetSuite::ImageDecoders::Auto, imageDescriptor);
 			Assert::AreEqual(true, AssetSuite::ErrorCode::FileTypeNotSupported == error);
+		}
+
+		TEST_METHOD(RawBufferIsEmpty)
+		{
+			// In this test we don't need real data
+			std::vector<BYTE> output;
+			AssetSuite::ImageDescriptor imageDescriptor;
+			AssetSuite::Manager manager;
+
+			auto error = manager.ImageDecode(AssetSuite::ImageDecoders::Auto, imageDescriptor);
+			Assert::AreEqual(true, AssetSuite::ErrorCode::RawBufferIsEmpty == error);
 		}
 	};
 }
