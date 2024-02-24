@@ -47,6 +47,7 @@ namespace AssetSuite
 		NonExistingFile = -1,
 		FileTypeNotSupported = -2,
 		ColorTypeNotSupported = -3,
+		RawBufferIsEmpty = -4,
 		Undefined = -1000
 	};
 
@@ -93,7 +94,6 @@ namespace AssetSuite
 		{
 			std::filesystem::path fullName;
 			std::filesystem::path extension;
-			bool hasBeenProcessed = false;
 		};
 		ErrorCode LoadFileToMemory(const std::string& fileName);
 		void StoreMemoryToFile(const std::vector<BYTE>& buffer, const std::string& fileName);

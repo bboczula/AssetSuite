@@ -63,6 +63,11 @@ AssetSuite::ErrorCode AssetSuite::Manager::ImageLoad(const char* filePathAndName
 
 AssetSuite::ErrorCode AssetSuite::Manager::ImageDecode(ImageDecoders decoder, ImageDescriptor& descriptor)
 {
+      if (rawBuffer.empty())
+      {
+            return ErrorCode::RawBufferIsEmpty;
+      }
+
       if (decoder == ImageDecoders::Auto)
       {
             if (fileInfo.extension.compare(".bmp") == 0)
@@ -73,21 +78,11 @@ AssetSuite::ErrorCode AssetSuite::Manager::ImageDecode(ImageDecoders decoder, Im
             {
                   decoder = ImageDecoders::PNG;
             }
+            return ErrorCode::FileTypeNotSupported;
       }
 
       auto error = imageDecoders[(size_t)decoder]->Decode(decodedBuffer, rawBuffer.data(), descriptor);
-      ErrorCode result = error == DecoderError::NoDecoderError ? ErrorCode::OK : ErrorCode::ColorTypeNotSupported;
-      fileInfo.hasBeenProcessed = true;
-
-      if (!fileInfo.hasBeenProcessed)
-      {
-            return AssetSuite::ErrorCode::FileTypeNotSupported;
-      }
-      else
-      {
-            return result;
-      }
-      return ErrorCode::Undefined;
+      return (error == DecoderError::NoDecoderError) ? ErrorCode::OK : ErrorCode::ColorTypeNotSupported;
 }
 
 AssetSuite::ErrorCode AssetSuite::Manager::ImageGet(OutputFormat format, std::vector<BYTE>& output)
