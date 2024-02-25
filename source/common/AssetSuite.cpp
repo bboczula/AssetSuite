@@ -78,7 +78,10 @@ AssetSuite::ErrorCode AssetSuite::Manager::ImageDecode(ImageDecoders decoder, Im
             {
                   decoder = ImageDecoders::PNG;
             }
-            return ErrorCode::FileTypeNotSupported;
+            else
+            {
+                  return ErrorCode::FileTypeNotSupported;
+            }
       }
 
       auto error = imageDecoders[(size_t)decoder]->Decode(decodedBuffer, rawBuffer.data(), descriptor);
@@ -87,12 +90,12 @@ AssetSuite::ErrorCode AssetSuite::Manager::ImageDecode(ImageDecoders decoder, Im
 
 AssetSuite::ErrorCode AssetSuite::Manager::ImageGet(OutputFormat format, std::vector<BYTE>& output)
 {
-      // Here you can do the formatting part (for now just copy)
-      output.resize(decodedBuffer.size());
-      for (int i = 0; i < decodedBuffer.size(); i++)
+      if (decodedBuffer.empty())
       {
-            output[i] = decodedBuffer[i];
+            return ErrorCode::DecodedBufferIsEmpty;
       }
+
+      output = decodedBuffer;
       return ErrorCode::OK;
 }
 

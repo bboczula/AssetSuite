@@ -32,5 +32,16 @@ namespace GeneralUnitTests
 			auto error = manager.ImageDecode(AssetSuite::ImageDecoders::Auto, imageDescriptor);
 			Assert::AreEqual(true, AssetSuite::ErrorCode::RawBufferIsEmpty == error);
 		}
+
+		TEST_METHOD(DecodedBufferIsEmpty)
+		{
+			// In this test we don't need real data
+			std::vector<BYTE> output;
+			AssetSuite::ImageDescriptor imageDescriptor;
+			AssetSuite::Manager manager;
+
+			auto error = manager.ImageGet(AssetSuite::OutputFormat::RGB8, output);
+			Assert::AreEqual(true, AssetSuite::ErrorCode::DecodedBufferIsEmpty == error);
+		}
 	};
 }
