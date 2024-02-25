@@ -48,6 +48,7 @@ namespace AssetSuite
 		FileTypeNotSupported = -2,
 		ColorTypeNotSupported = -3,
 		RawBufferIsEmpty = -4,
+		DecodedBufferIsEmpty = -5,
 		Undefined = -1000
 	};
 
