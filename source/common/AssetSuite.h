@@ -14,6 +14,7 @@
 
 #include "ImageDescriptor.h"
 #include "ImageDecoder.h"
+#include "MeshDescriptor.h"
 
 // I want to be able to easily extend the interface, so I can add new file fromats
 // Or even some custom binary files, or add JPEG or even different 3D formats
@@ -38,7 +39,9 @@ namespace AssetSuite
 
 	enum class ASSET_SUITE_EXPORTS MeshDecoders
 	{
-		WAVEFRONT
+		Auto,
+		WAVEFRONT,
+		MaxDecoders
 	};
 
 	enum class ASSET_SUITE_EXPORTS ErrorCode
@@ -64,10 +67,12 @@ namespace AssetSuite
 		RGBA8
 	};
 
-	struct ASSET_SUITE_EXPORTS MeshDescriptor
+	enum class ASSET_SUITE_EXPORTS MeshOutputFormat
 	{
-		UINT numOfVertices;
-		UINT numOfIndices;
+		POSITION,
+		NORMAL,
+		TANGENT,
+		TEXCOORD
 	};
 
 	class ASSET_SUITE_EXPORTS Manager
@@ -82,11 +87,10 @@ namespace AssetSuite
 		ErrorCode ImageDecode(ImageDecoders decoder, ImageDescriptor& descriptor);
 		ErrorCode ImageGet(OutputFormat format, std::vector<BYTE>& output);
 
-		BYTE* LoadMeshFromFile(const std::string& filePathAndName, MeshDescriptor& meshDescriptor);
 		void StoreMeshToFile(const std::string& filePathAndName, BYTE* buffer, const MeshDescriptor& imageDescriptor);
-		ErrorCode LoadMesh();
-		ErrorCode DecodeMesh();
-		ErrorCode GetMesh();
+		ErrorCode MeshLoad(const char* filePathAndName);
+		ErrorCode MeshDecode(MeshDecoders decoder, MeshDescriptor& descriptor);
+		ErrorCode MeshGet(const char* meshName, MeshOutputFormat format, std::vector<FLOAT>& output);
 
 		ErrorCode DumpRawBuffer();
 		ErrorCode DumpDecodedBuffer();
@@ -96,7 +100,7 @@ namespace AssetSuite
 			std::filesystem::path fullName;
 			std::filesystem::path extension;
 		};
-		ErrorCode LoadFileToMemory(const std::string& fileName);
+		ErrorCode LoadFileToMemory(const std::string& fileName, bool isBinary = true);
 		void StoreMemoryToFile(const std::vector<BYTE>& buffer, const std::string& fileName);
 		void DumpByteVectorToCpp(const std::vector<BYTE>& byteVector);
 		void DumpBuffer(const std::string& fileName, const std::vector<BYTE>& buffer, ImageDescriptor& descriptor);

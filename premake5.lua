@@ -117,6 +117,7 @@ project "bypass"
 project "wavefront"
 	kind "StaticLib"
 	language "C++"
+	cppdialect "C++17"
 	targetdir "bin/%{cfg.buildcfg}/bin"
 	files { "source/wavefront/**.h", "source/wavefront/**.cpp" }
 	SetDebugFilters()
@@ -133,6 +134,7 @@ project "bitstream"
 project "DemoApplication"
 	kind "ConsoleApp"
 	language "C++"
+	cppdialect "C++17"
 	targetdir "bin/%{cfg.buildcfg}/demo"
 	files { "source/demo/**.h", "source/demo/**.cpp" }
 	links { "AssetSuite" }
@@ -146,6 +148,7 @@ project "DemoApplication"
 project "UnitTest"
 	kind "SharedLib"
 	language "C++"
+	cppdialect "C++17"
 	targetdir "bin/%{cfg.buildcfg}/tests"
 	files { "unit_tests/**.h", "unit_tests/**.cpp" }
 	links { "AssetSuite", "zlib", "bmp", "png", "ppm", "wavefront", "bitstream" }

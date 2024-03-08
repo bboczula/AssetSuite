@@ -1,6 +1,5 @@
 #include "CppUnitTest.h"
 #include "../source/wavefront/ModelLoader.h"
-//#include "../model_loader/ModelLoader.cpp"
 #include <vector>
 #include <string>
 
@@ -364,6 +363,7 @@ namespace ModelLoaderUnitTest
 			delete modelLoader;
 		}
 	};
+
 	TEST_CLASS(GroupSize)
 	{
 		TEST_METHOD(BasicGroupSize1)
@@ -432,6 +432,162 @@ namespace ModelLoaderUnitTest
 
 			Assert::AreEqual((unsigned int)2, modelLoader->GetGroupSize("arcs_floor"));
 			Assert::AreEqual((unsigned int)2, modelLoader->GetGroupSize("arcs_main"));
+		}
+	};
+
+	TEST_CLASS(BasicBehavior)
+	{
+		TEST_METHOD(BasicBehaviorOne)
+		{
+			AssetSuite::MeshDescriptor meshDescriptor;
+			// This one is not really used
+			std::vector<BYTE> output;
+			std::vector<BYTE> input;
+			BYTE inputString[] = 
+				"g Triangle\r\n"
+				"v -1.0 0.0 1.0\r\n"
+				"v 1.0 0.0 1.0\r\n"
+				"v -1.0 0.0 -1.0\r\n"
+				"vn -0.0000 1.0000 -0.0000\r\n"
+				"vt -2.0000 -2.0000\r\n"
+				"vt 3.0000 -2.0000\r\n"
+				"vt -2.0000 3.0000\r\n"
+				"f 1/1/1 2/2/1 3/3/1\r\n";
+			AssetSuite::ModelLoader* modelLoader = new AssetSuite::ModelLoader;
+			modelLoader->Decode(output, inputString, meshDescriptor);
+
+			auto numOfGroups = modelLoader->GetNumOfGroups();
+			Assert::AreEqual((unsigned)1, numOfGroups);
+
+			auto groupOffset = modelLoader->GetGroupOffset("Triangle\r");
+			Assert::AreEqual((unsigned)0, groupOffset);
+
+			auto groupSize = modelLoader->GetGroupSize("Triangle\r");
+			Assert::AreEqual((unsigned)1, groupSize);
+
+			auto face = modelLoader->GetFace(groupOffset);
+			Assert::AreEqual((unsigned)0, face.vertexIndex[0]);
+			Assert::AreEqual((unsigned)1, face.vertexIndex[1]);
+			Assert::AreEqual((unsigned)2, face.vertexIndex[2]);
+			Assert::AreEqual((unsigned)0, face.textureIndex[0]);
+			Assert::AreEqual((unsigned)1, face.textureIndex[1]);
+			Assert::AreEqual((unsigned)2, face.textureIndex[2]);
+			Assert::AreEqual((unsigned)0, face.normalIndex[0]);
+			Assert::AreEqual((unsigned)0, face.normalIndex[1]);
+			Assert::AreEqual((unsigned)0, face.normalIndex[2]);
+
+			auto vertex1 = modelLoader->GetVertex(face.vertexIndex[0]);
+			Assert::AreEqual(-1.0f, vertex1.x);
+			Assert::AreEqual(0.0f, vertex1.y);
+			Assert::AreEqual(1.0f, vertex1.z);
+
+			auto vertex2 = modelLoader->GetVertex(face.vertexIndex[1]);
+			Assert::AreEqual(1.0f, vertex2.x);
+			Assert::AreEqual(0.0f, vertex2.y);
+			Assert::AreEqual(1.0f, vertex2.z);
+
+			auto vertex3 = modelLoader->GetVertex(face.vertexIndex[2]);
+			Assert::AreEqual(-1.0f, vertex3.x);
+			Assert::AreEqual(0.0f, vertex3.y);
+			Assert::AreEqual(-1.0f, vertex3.z);
+		}
+
+		TEST_METHOD(BasicBehaviorTwo)
+		{
+			AssetSuite::MeshDescriptor meshDescriptor;
+			// This one is not really used
+			std::vector<BYTE> output;
+			std::vector<BYTE> input;
+			BYTE inputString[] =
+				"g TriangleOne_Mesh\r\n"
+				"v -1.000000 0.000000 1.000000\r\n"
+				"v 1.000000 0.000000 1.000000\r\n"
+				"v -1.000000 0.000000 -1.000000\r\n"
+				"vn -0.0000 1.0000 -0.0000\r\n"
+				"vt 0.000000 0.000000\r\n"
+				"vt 0.000000 0.000000\r\n"
+				"vt 0.000000 0.000000\r\n"
+				"s 0\r\n"
+				"f 1/1/1 2/2/1 3/3/1\r\n"
+				"g TriangleTwo_Mesh\r\n"
+				"v -1.000000 0.000000 -2.005714\r\n"
+				"v 1.000000 0.000000 -2.005714\r\n"
+				"v -1.000000 0.000000 -4.005713\r\n"
+				"vn -0.0000 1.0000 -0.0000\r\n"
+				"vt 0.000000 0.000000\r\n"
+				"vt 0.000000 0.000000\r\n"
+				"vt 0.000000 0.000000\r\n"
+				"s 0\r\n"
+				"f 4/4/2 5/5/2 6/6/2\r\n";
+			AssetSuite::ModelLoader* modelLoader = new AssetSuite::ModelLoader;
+			modelLoader->Decode(output, inputString, meshDescriptor);
+
+			auto numOfGroups = modelLoader->GetNumOfGroups();
+			Assert::AreEqual((unsigned)2, numOfGroups);
+
+			auto groupOffset1 = modelLoader->GetGroupOffset("TriangleOne_Mesh\r");
+			Assert::AreEqual((unsigned)0, groupOffset1);
+
+			auto groupSize1 = modelLoader->GetGroupSize("TriangleOne_Mesh\r");
+			Assert::AreEqual((unsigned)1, groupSize1);
+
+			auto groupOffset2 = modelLoader->GetGroupOffset("TriangleTwo_Mesh\r");
+			Assert::AreEqual((unsigned)1, groupOffset2);
+
+			auto groupSize2 = modelLoader->GetGroupSize("TriangleTwo_Mesh\r");
+			Assert::AreEqual((unsigned)1, groupSize2);
+
+			auto face1 = modelLoader->GetFace(groupOffset1);
+			Assert::AreEqual((unsigned)0, face1.vertexIndex[0]);
+			Assert::AreEqual((unsigned)1, face1.vertexIndex[1]);
+			Assert::AreEqual((unsigned)2, face1.vertexIndex[2]);
+			Assert::AreEqual((unsigned)0, face1.textureIndex[0]);
+			Assert::AreEqual((unsigned)1, face1.textureIndex[1]);
+			Assert::AreEqual((unsigned)2, face1.textureIndex[2]);
+			Assert::AreEqual((unsigned)0, face1.normalIndex[0]);
+			Assert::AreEqual((unsigned)0, face1.normalIndex[1]);
+			Assert::AreEqual((unsigned)0, face1.normalIndex[2]);
+
+			auto face2 = modelLoader->GetFace(groupOffset2);
+			Assert::AreEqual((unsigned)3, face2.vertexIndex[0]);
+			Assert::AreEqual((unsigned)4, face2.vertexIndex[1]);
+			Assert::AreEqual((unsigned)5, face2.vertexIndex[2]);
+			Assert::AreEqual((unsigned)3, face2.textureIndex[0]);
+			Assert::AreEqual((unsigned)4, face2.textureIndex[1]);
+			Assert::AreEqual((unsigned)5, face2.textureIndex[2]);
+			Assert::AreEqual((unsigned)1, face2.normalIndex[0]);
+			Assert::AreEqual((unsigned)1, face2.normalIndex[1]);
+			Assert::AreEqual((unsigned)1, face2.normalIndex[2]);
+
+			auto vertex1 = modelLoader->GetVertex(face1.vertexIndex[0]);
+			Assert::AreEqual(-1.0f, vertex1.x);
+			Assert::AreEqual(0.0f, vertex1.y);
+			Assert::AreEqual(1.0f, vertex1.z);
+
+			auto vertex2 = modelLoader->GetVertex(face1.vertexIndex[1]);
+			Assert::AreEqual(1.0f, vertex2.x);
+			Assert::AreEqual(0.0f, vertex2.y);
+			Assert::AreEqual(1.0f, vertex2.z);
+
+			auto vertex3 = modelLoader->GetVertex(face1.vertexIndex[2]);
+			Assert::AreEqual(-1.0f, vertex3.x);
+			Assert::AreEqual(0.0f, vertex3.y);
+			Assert::AreEqual(-1.0f, vertex3.z);
+
+			auto vertex4 = modelLoader->GetVertex(face2.vertexIndex[0]);
+			Assert::AreEqual(-1.0f, vertex4.x);
+			Assert::AreEqual(0.0f, vertex4.y);
+			Assert::AreEqual(-2.005714f, vertex4.z);
+
+			auto vertex5 = modelLoader->GetVertex(face2.vertexIndex[1]);
+			Assert::AreEqual(1.0f, vertex5.x);
+			Assert::AreEqual(0.0f, vertex5.y);
+			Assert::AreEqual(-2.005714f, vertex5.z);
+
+			auto vertex6 = modelLoader->GetVertex(face2.vertexIndex[2]);
+			Assert::AreEqual(-1.0f, vertex6.x);
+			Assert::AreEqual(0.0f, vertex6.y);
+			Assert::AreEqual(-4.005713f, vertex6.z);
 		}
 	};
 }

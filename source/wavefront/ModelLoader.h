@@ -2,7 +2,10 @@
 
 #include <string>
 #include <fstream>
+#include <sstream>
 #include <vector>
+
+#include "../common/MeshDecoder.h"
 
 #include "Handler.h"
 #include "VertexHandler.h"
@@ -15,12 +18,12 @@
 
 namespace AssetSuite
 {
-	class ModelLoader
+	class ModelLoader : public MeshDecoder
 	{
 	public:
 		ModelLoader();
 		~ModelLoader();
-		void LoadFromFile(std::string filename);
+		MeshDecoderError Decode(std::vector<BYTE>& output, BYTE* buffer, MeshDescriptor& descriptor);
 		void GenerateNormals();
 		void GenerateTangents();
 		void DumpToFile(std::string filename);
