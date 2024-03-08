@@ -55,25 +55,18 @@ AssetSuite::ModelLoader::~ModelLoader()
 	}
 }
 
-void AssetSuite::ModelLoader::LoadFromFile(std::string filePath)
+AssetSuite::MeshDecoderError AssetSuite::ModelLoader::Decode(std::vector<BYTE>& output, BYTE* buffer, MeshDescriptor& descriptor)
 {
-	if (currentFile.compare(filePath) == 0)
-	{
-		// This is the same file, no need to reload
-		return;
-	}
-
 	// Need to reset buffers
 	Reset();
 
-	// Process file
-	std::ifstream file(filePath);
+	std::stringstream ss;
+	ss << buffer;
 	std::string line;
-	while (std::getline(file, line))
+	while (std::getline(ss, line))
 	{
 		ProcessLine((char*)line.c_str());
 	}
-	file.close();
 
 	if (!normalHandler->normals.size())
 	{
@@ -85,7 +78,7 @@ void AssetSuite::ModelLoader::LoadFromFile(std::string filePath)
 		GenerateTangents();
 	}
 
-	currentFile = filePath;
+	return MeshDecoderError::MeshNoDecoderError;
 }
 
 void AssetSuite::ModelLoader::GenerateNormals()
