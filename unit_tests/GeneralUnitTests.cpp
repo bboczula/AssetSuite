@@ -141,7 +141,7 @@ namespace GeneralUnitTests
 		{
 			AssetSuite::Manager manager;
 
-			auto error = manager.MeshLoad("test_mesh.obj");
+			auto error = manager.MeshLoad("tangent_mesh_1.obj");
 			Assert::AreEqual(true, AssetSuite::ErrorCode::OK == error);
 
 			AssetSuite::MeshDescriptor descriptor;
@@ -156,18 +156,18 @@ namespace GeneralUnitTests
 			Assert::AreEqual((size_t)12, output.size());
 
 			// Check if the data is correct
-			Assert::AreEqual(0.0f, output[0]);
-			Assert::AreEqual(1.0f, output[1]);
+			Assert::AreEqual(2.0f, output[0]);
+			Assert::AreEqual(0.0f, output[1]);
 			Assert::AreEqual(0.0f, output[2]);
 			Assert::AreEqual(0.0f, output[3]);
 
-			Assert::AreEqual(0.0f, output[4]);
-			Assert::AreEqual(1.0f, output[5]);
+			Assert::AreEqual(2.0f, output[4]);
+			Assert::AreEqual(0.0f, output[5]);
 			Assert::AreEqual(0.0f, output[6]);
 			Assert::AreEqual(0.0f, output[7]);
 
-			Assert::AreEqual(0.0f, output[8]);
-			Assert::AreEqual(1.0f, output[9]);
+			Assert::AreEqual(2.0f, output[8]);
+			Assert::AreEqual(0.0f, output[9]);
 			Assert::AreEqual(0.0f, output[10]);
 			Assert::AreEqual(0.0f, output[11]);
 		}

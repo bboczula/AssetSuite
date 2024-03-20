@@ -124,8 +124,8 @@ void AssetSuite::ModelLoader::GenerateTangents()
 		auto p3 = vertexHandler->GetVertexAt(faceHandler->faces[i].vertexIndex[2]);
 
 		// Calculate two vectors
-		auto a = static_cast<MiniMath::Vector3D>(p2 - p1);
-		auto b = static_cast<MiniMath::Vector3D>(p3 - p1);
+		auto e1 = static_cast<MiniMath::Vector3D>(p2 - p1);
+		auto e2 = static_cast<MiniMath::Vector3D>(p3 - p1);
 
 		// Assemble UVs
 		auto uv1 = textureHandler->GetTextureCoordAt(faceHandler->faces[i].textureIndex[0]);
@@ -140,9 +140,9 @@ void AssetSuite::ModelLoader::GenerateTangents()
 		float f = 1.0f / (deltaUv1.x * deltaUv2.y - deltaUv2.x * deltaUv1.y);
 
 		MiniMath::Vector3D tangent(0.0f, 0.0f, 0.0f);
-		tangent.x = f * (deltaUv2.y * a.x - deltaUv1.y / b.x);
-		tangent.y = f * (deltaUv2.y * a.y - deltaUv1.y / b.y);
-		tangent.z = f * (deltaUv2.y * a.z - deltaUv1.y / b.z);
+		tangent.x = f * (deltaUv2.y * e1.x - deltaUv1.y * e2.x);
+		tangent.y = f * (deltaUv2.y * e1.y - deltaUv1.y * e2.y);
+		tangent.z = f * (deltaUv2.y * e1.z - deltaUv1.y * e2.z);
 
 		// Push the tangent to the tangent heap
 		normalHandler->tangents.push_back(tangent);
