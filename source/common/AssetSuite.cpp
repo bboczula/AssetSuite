@@ -50,7 +50,17 @@ AssetSuite::Manager::~Manager()
 AssetSuite::ErrorCode AssetSuite::Manager::ImageLoadAndDecode(const char* filePathAndName, ImageDescriptor& descriptor, ImageDecoders decoder)
 {
       auto loadResult = ImageLoad(filePathAndName);
+      if (loadResult != ErrorCode::OK)
+      {
+            return loadResult;
+      }
+
       auto decodeResult = ImageDecode(ImageDecoders::Auto, descriptor);
+      if (decodeResult != ErrorCode::OK)
+      {
+            return decodeResult;
+      }
+
       return decodeResult;
 }
 
@@ -101,6 +111,23 @@ AssetSuite::ErrorCode AssetSuite::Manager::ImageGet(OutputFormat format, std::ve
 
 void AssetSuite::Manager::StoreMeshToFile(const std::string& filePathAndName, BYTE* buffer, const MeshDescriptor& imageDescriptor)
 {
+}
+
+AssetSuite::ErrorCode AssetSuite::Manager::MeshLoadAndDecode(const char* filePathAndName, MeshDescriptor& descriptor, MeshDecoders decoder)
+{
+      auto loadResult = MeshLoad(filePathAndName);
+      if (loadResult != ErrorCode::OK)
+      {
+            return loadResult;
+      }
+
+      auto decodeResult = MeshDecode(decoder, descriptor);
+      if (decodeResult != ErrorCode::OK)
+      {
+            return decodeResult;
+      }
+
+      return decodeResult;
 }
 
 AssetSuite::ErrorCode AssetSuite::Manager::MeshLoad(const char* filePathAndName)
