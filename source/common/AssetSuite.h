@@ -88,6 +88,7 @@ namespace AssetSuite
 		ErrorCode ImageGet(OutputFormat format, std::vector<BYTE>& output);
 
 		void StoreMeshToFile(const std::string& filePathAndName, BYTE* buffer, const MeshDescriptor& imageDescriptor);
+		ErrorCode MeshLoadAndDecode(const char* filePathAndName, MeshDescriptor& descriptor, MeshDecoders decoder = MeshDecoders::Auto);
 		ErrorCode MeshLoad(const char* filePathAndName);
 		ErrorCode MeshDecode(MeshDecoders decoder, MeshDescriptor& descriptor);
 		ErrorCode MeshGet(const char* meshName, MeshOutputFormat format, std::vector<FLOAT>& output);
