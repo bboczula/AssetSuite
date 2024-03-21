@@ -13,12 +13,11 @@ namespace GeneralUnitTests
 		{
 			// In this test we don't need real data
 			std::vector<BYTE> output;
-			AssetSuite::ImageDescriptor imageDescriptor;
 			AssetSuite::Manager manager;
 
 			// This file needs to exist
 			manager.ImageLoad("test_file.xyz");
-			auto error = manager.ImageDecode(AssetSuite::ImageDecoders::Auto, imageDescriptor);
+			auto error = manager.ImageDecode(AssetSuite::ImageDecoders::Auto);
 			Assert::AreEqual(true, AssetSuite::ErrorCode::FileTypeNotSupported == error);
 		}
 
@@ -26,10 +25,9 @@ namespace GeneralUnitTests
 		{
 			// In this test we don't need real data
 			std::vector<BYTE> output;
-			AssetSuite::ImageDescriptor imageDescriptor;
 			AssetSuite::Manager manager;
 
-			auto error = manager.ImageDecode(AssetSuite::ImageDecoders::Auto, imageDescriptor);
+			auto error = manager.ImageDecode(AssetSuite::ImageDecoders::Auto);
 			Assert::AreEqual(true, AssetSuite::ErrorCode::RawBufferIsEmpty == error);
 		}
 
@@ -40,7 +38,7 @@ namespace GeneralUnitTests
 			AssetSuite::ImageDescriptor imageDescriptor;
 			AssetSuite::Manager manager;
 
-			auto error = manager.ImageGet(AssetSuite::OutputFormat::RGB8, output);
+			auto error = manager.ImageGet(AssetSuite::OutputFormat::RGB8, output, imageDescriptor);
 			Assert::AreEqual(true, AssetSuite::ErrorCode::DecodedBufferIsEmpty == error);
 		}
 	};
@@ -63,8 +61,7 @@ namespace GeneralUnitTests
 			AssetSuite::Manager manager;
 
 			manager.MeshLoad("test_file.xyz");
-			AssetSuite::MeshDescriptor descriptor;
-			auto error = manager.MeshDecode(AssetSuite::MeshDecoders::Auto, descriptor);
+			auto error = manager.MeshDecode(AssetSuite::MeshDecoders::Auto);
 			Assert::AreEqual(true, AssetSuite::ErrorCode::FileTypeNotSupported == error);
 		}
 		TEST_METHOD(MeshPostion)
@@ -74,12 +71,12 @@ namespace GeneralUnitTests
 			auto error = manager.MeshLoad("test_mesh.obj");
 			Assert::AreEqual(true, AssetSuite::ErrorCode::OK == error);
 
-			AssetSuite::MeshDescriptor descriptor;
-			error = manager.MeshDecode(AssetSuite::MeshDecoders::Auto, descriptor);
+			error = manager.MeshDecode(AssetSuite::MeshDecoders::Auto);
 			Assert::AreEqual(true, AssetSuite::ErrorCode::OK == error);
 
 			std::vector<FLOAT> output;
-			error = manager.MeshGet("TriangleOne_Mesh\r", AssetSuite::MeshOutputFormat::POSITION, output);
+			AssetSuite::MeshDescriptor descriptor;
+			error = manager.MeshGet("TriangleOne_Mesh\r", AssetSuite::MeshOutputFormat::POSITION, output, descriptor);
 			Assert::AreEqual(true, AssetSuite::ErrorCode::OK == error);
 
 			// Three vertices, each have four components
@@ -109,12 +106,12 @@ namespace GeneralUnitTests
 			auto error = manager.MeshLoad("test_mesh.obj");
 			Assert::AreEqual(true, AssetSuite::ErrorCode::OK == error);
 
-			AssetSuite::MeshDescriptor descriptor;
-			error = manager.MeshDecode(AssetSuite::MeshDecoders::Auto, descriptor);
+			error = manager.MeshDecode(AssetSuite::MeshDecoders::Auto);
 			Assert::AreEqual(true, AssetSuite::ErrorCode::OK == error);
 
 			std::vector<FLOAT> output;
-			error = manager.MeshGet("TriangleOne_Mesh\r", AssetSuite::MeshOutputFormat::NORMAL, output);
+			AssetSuite::MeshDescriptor descriptor;
+			error = manager.MeshGet("TriangleOne_Mesh\r", AssetSuite::MeshOutputFormat::NORMAL, output, descriptor);
 			Assert::AreEqual(true, AssetSuite::ErrorCode::OK == error);
 
 			// Three vertices, each have four components
@@ -144,12 +141,13 @@ namespace GeneralUnitTests
 			auto error = manager.MeshLoad("tangent_mesh_1.obj");
 			Assert::AreEqual(true, AssetSuite::ErrorCode::OK == error);
 
-			AssetSuite::MeshDescriptor descriptor;
-			error = manager.MeshDecode(AssetSuite::MeshDecoders::Auto, descriptor);
+			
+			error = manager.MeshDecode(AssetSuite::MeshDecoders::Auto);
 			Assert::AreEqual(true, AssetSuite::ErrorCode::OK == error);
 
 			std::vector<FLOAT> output;
-			error = manager.MeshGet("TriangleOne_Mesh\r", AssetSuite::MeshOutputFormat::TANGENT, output);
+			AssetSuite::MeshDescriptor descriptor;
+			error = manager.MeshGet("TriangleOne_Mesh\r", AssetSuite::MeshOutputFormat::TANGENT, output, descriptor);
 			Assert::AreEqual(true, AssetSuite::ErrorCode::OK == error);
 
 			// Three vertices, each have four components
@@ -179,12 +177,12 @@ namespace GeneralUnitTests
 			auto error = manager.MeshLoad("test_mesh.obj");
 			Assert::AreEqual(true, AssetSuite::ErrorCode::OK == error);
 
-			AssetSuite::MeshDescriptor descriptor;
-			error = manager.MeshDecode(AssetSuite::MeshDecoders::Auto, descriptor);
+			error = manager.MeshDecode(AssetSuite::MeshDecoders::Auto);
 			Assert::AreEqual(true, AssetSuite::ErrorCode::OK == error);
 
 			std::vector<FLOAT> output;
-			error = manager.MeshGet("TriangleOne_Mesh\r", AssetSuite::MeshOutputFormat::TEXCOORD, output);
+			AssetSuite::MeshDescriptor descriptor;
+			error = manager.MeshGet("TriangleOne_Mesh\r", AssetSuite::MeshOutputFormat::TEXCOORD, output, descriptor);
 			Assert::AreEqual(true, AssetSuite::ErrorCode::OK == error);
 
 			// Three vertices, each have two components

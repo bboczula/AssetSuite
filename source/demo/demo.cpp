@@ -10,7 +10,7 @@ void main()
 	std::cout << "Hello, AssetSuite!" << std::endl;
 
 	AssetSuite::ImageDescriptor imageDescriptor = {};
-	auto errorCode = assetManager.ImageLoadAndDecode("paint-01-24bpp.bmp", imageDescriptor);
+	auto errorCode = assetManager.ImageLoadAndDecode("paint-01-24bpp.bmp");
 
 #if DUMP_BUFFERS
 	assetManager.DumpRawBuffer();
@@ -18,12 +18,12 @@ void main()
 #endif
 
 	std::vector<BYTE> imageOutput;
-	errorCode = assetManager.ImageGet(AssetSuite::OutputFormat::RGB8, imageOutput);
+	errorCode = assetManager.ImageGet(AssetSuite::OutputFormat::RGB8, imageOutput, imageDescriptor);
 	assetManager.StoreImageToFile("output.ppm", imageOutput, imageDescriptor);
 
 	AssetSuite::MeshDescriptor meshDescriptor;
-	errorCode = assetManager.MeshLoadAndDecode("wavefront_sample.obj", meshDescriptor);
+	errorCode = assetManager.MeshLoadAndDecode("wavefront_sample.obj");
 
 	std::vector<FLOAT> meshOutput;
-	errorCode = assetManager.MeshGet("Plane_Plane\r", AssetSuite::MeshOutputFormat::POSITION, meshOutput);
+	errorCode = assetManager.MeshGet("Plane_Plane\r", AssetSuite::MeshOutputFormat::POSITION, meshOutput, meshDescriptor);
 }
