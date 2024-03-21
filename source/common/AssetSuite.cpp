@@ -17,6 +17,8 @@ AssetSuite::Manager::Manager() : modelLoader(nullptr)
 
       imageDecoders[(size_t)ImageDecoders::BMP] = bmpDecoder;
       imageDecoders[(size_t)ImageDecoders::PNG] = pngDecoder;
+
+      meshDecoders[(size_t)MeshDecoders::WAVEFRONT] = modelLoader;
 }
 
 AssetSuite::Manager::~Manager()
@@ -95,7 +97,7 @@ AssetSuite::ErrorCode AssetSuite::Manager::ImageDecode(ImageDecoders decoder, Im
       }
 
       auto error = imageDecoders[(size_t)decoder]->Decode(decodedBuffer, rawBuffer.data(), descriptor);
-      return (!error) ? ErrorCode::OK : ErrorCode::ColorTypeNotSupported;
+      return error ? ErrorCode::OK : ErrorCode::Undefined;
 }
 
 AssetSuite::ErrorCode AssetSuite::Manager::ImageGet(OutputFormat format, std::vector<BYTE>& output)
@@ -156,13 +158,9 @@ AssetSuite::ErrorCode AssetSuite::Manager::MeshDecode(MeshDecoders decoder, Mesh
             }
       }
 
-      // Here you only have one, so far I don't need an array of pointers
-      // std::stringstream ss;
-      // ss << rawBuffer.data();
-      // std::string line;
-      // std::getline(ss, line);
       std::vector<BYTE> output;
-      modelLoader->Decode(output, rawBuffer.data(), descriptor);
+      auto error = meshDecoders[(size_t)decoder]->Decode(output, rawBuffer.data(), descriptor);
+      return error ? ErrorCode::OK : ErrorCode::Undefined;
 
       return ErrorCode();
 }
