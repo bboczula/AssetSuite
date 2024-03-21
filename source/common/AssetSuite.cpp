@@ -179,8 +179,8 @@ AssetSuite::ErrorCode AssetSuite::Manager::MeshGet(const char* meshName, MeshOut
       // Fetch the group data
       auto groupOffset = modelLoader->GetGroupOffset(meshName);
       auto groupSize = modelLoader->GetGroupSize(meshName);
-      meshInfo.numOfVertices = groupSize * 3;
-      meshInfo.numOfIndices = groupSize * 3;
+      meshInfo.numOfVertices = groupSize;
+      meshInfo.numOfIndices = groupSize;
       descriptor.numOfVertices = meshInfo.numOfVertices;
       descriptor.numOfIndices = meshInfo.numOfIndices;
 
