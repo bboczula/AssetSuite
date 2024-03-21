@@ -90,7 +90,7 @@ namespace AssetSuite
 	class PngDecoder : public ImageDecoder
 	{
 	public:
-		DecoderError Decode(std::vector<BYTE>& output, BYTE* buffer, ImageDescriptor& descriptor) override;
+		bool Decode(std::vector<BYTE>& output, BYTE* buffer, ImageDescriptor& descriptor) override;
 	private:
 		std::vector<BYTE> compressedDataBuffer;
 		std::vector<BYTE> scanlines;
