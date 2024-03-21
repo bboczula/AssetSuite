@@ -23,7 +23,7 @@ namespace AssetSuite
 	public:
 		ModelLoader();
 		~ModelLoader();
-		MeshDecoderError Decode(std::vector<BYTE>& output, BYTE* buffer, MeshDescriptor& descriptor);
+		bool Decode(std::vector<BYTE>& output, BYTE* buffer, MeshDescriptor& descriptor);
 		void GenerateNormals();
 		void GenerateTangents();
 		void DumpToFile(std::string filename);

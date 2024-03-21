@@ -4,7 +4,7 @@
 
 #define ENABLE_PRINT 0
 
-AssetSuite::DecoderError AssetSuite::PngDecoder::Decode(std::vector<BYTE>& output, BYTE* buffer, ImageDescriptor& descriptor)
+bool AssetSuite::PngDecoder::Decode(std::vector<BYTE>& output, BYTE* buffer, ImageDescriptor& descriptor)
 {
 	// Reset the buffers in case you  are reading multiple files
 	scanlines.clear();
@@ -53,7 +53,7 @@ AssetSuite::DecoderError AssetSuite::PngDecoder::Decode(std::vector<BYTE>& outpu
 	//}
 	if (descriptor.format == ImageFormat::Unknown)
 	{
-		return DecoderError::ColorTypeNotSupported;
+		return false;
 	}
 
 	ZLib zlib;
@@ -131,7 +131,7 @@ AssetSuite::DecoderError AssetSuite::PngDecoder::Decode(std::vector<BYTE>& outpu
 		}
 	}
 	output = filtered;
-	return DecoderError::NoDecoderError;
+	return true;
 }
 
 unsigned long AssetSuite::PngDecoder::Convert1Byte(const BYTE* buffer)

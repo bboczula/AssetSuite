@@ -55,7 +55,7 @@ AssetSuite::ModelLoader::~ModelLoader()
 	}
 }
 
-AssetSuite::MeshDecoderError AssetSuite::ModelLoader::Decode(std::vector<BYTE>& output, BYTE* buffer, MeshDescriptor& descriptor)
+bool AssetSuite::ModelLoader::Decode(std::vector<BYTE>& output, BYTE* buffer, MeshDescriptor& descriptor)
 {
 	// Need to reset buffers
 	Reset();
@@ -78,7 +78,7 @@ AssetSuite::MeshDecoderError AssetSuite::ModelLoader::Decode(std::vector<BYTE>& 
 		GenerateTangents();
 	}
 
-	return MeshDecoderError::MeshNoDecoderError;
+	return true;
 }
 
 void AssetSuite::ModelLoader::GenerateNormals()

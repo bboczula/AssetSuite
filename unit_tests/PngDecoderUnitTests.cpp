@@ -35,7 +35,7 @@ namespace PngDecoderUnitTests
 			auto error = pngDecoder.Decode(actual, input.data(), imageDescriptor);
 			// Expected size is 4 x 4 x 4 = 64
 			// If this is 68, then you include the first byte whish represents filtering and not thecolor
-			Assert::AreEqual(true, AssetSuite::DecoderError::NoDecoderError == error);
+			Assert::AreEqual(true, error);
 			Assert::AreEqual((size_t)64, actual.size());
 		}
 
@@ -63,7 +63,7 @@ namespace PngDecoderUnitTests
 			AssetSuite::PngDecoder pngDecoder;
 			std::vector<BYTE> actual;
 			auto error = pngDecoder.Decode(actual, input.data(), imageDescriptor);
-			Assert::AreEqual(true, AssetSuite::DecoderError::NoDecoderError == error);
+			Assert::AreEqual(true, error);
 			Assert::AreEqual((UINT)4, imageDescriptor.width);
 			Assert::AreEqual((UINT)4, imageDescriptor.height);
 		}
@@ -94,7 +94,7 @@ namespace PngDecoderUnitTests
 			auto error = pngDecoder.Decode(actual, input.data(), imageDescriptor);
 			// Expected size is 4 x 4 x 4 = 64
 			// If this is 68, then you include the first byte whish represents filtering and not thecolor
-			Assert::AreEqual(true, AssetSuite::DecoderError::NoDecoderError == error);
+			Assert::AreEqual(true, error);
 			Assert::AreEqual(true, AssetSuite::ImageFormat::RGBA8 == imageDescriptor.format);
 		}
 
@@ -122,7 +122,7 @@ namespace PngDecoderUnitTests
 			AssetSuite::PngDecoder pngDecoder;
 			std::vector<BYTE> actual;
 			auto error = pngDecoder.Decode(actual, input.data(), imageDescriptor);
-			Assert::AreEqual(true, AssetSuite::DecoderError::NoDecoderError == error);
+			Assert::AreEqual(true, error);
 			Assert::AreEqual((UINT)10, imageDescriptor.width);
 			Assert::AreEqual((UINT)10, imageDescriptor.height);
 			Assert::AreEqual(true, AssetSuite::ImageFormat::RGB8 == imageDescriptor.format);
@@ -160,7 +160,7 @@ namespace PngDecoderUnitTests
 			auto error = pngDecoder.Decode(actual, input.data(), imageDescriptor);
 
 			// Test the metadata calculation
-			Assert::AreEqual(true, AssetSuite::DecoderError::NoDecoderError == error);
+			Assert::AreEqual(true, error);
 			Assert::AreEqual((UINT)4, imageDescriptor.width);
 			Assert::AreEqual((UINT)4, imageDescriptor.height);
 			Assert::AreEqual(true, AssetSuite::ImageFormat::RGBA8 == imageDescriptor.format);
@@ -199,7 +199,7 @@ namespace PngDecoderUnitTests
 			AssetSuite::PngDecoder pngDecoder;
 			std::vector<BYTE> actual;
 			auto error = pngDecoder.Decode(actual, input.data(), imageDescriptor);
-			Assert::AreEqual(true, AssetSuite::DecoderError::NoDecoderError == error);
+			Assert::AreEqual(true, error);
 
 			// Test the metadata calculation
 			Assert::AreEqual((UINT)4, imageDescriptor.width);
@@ -247,7 +247,7 @@ namespace PngDecoderUnitTests
 			AssetSuite::PngDecoder pngDecoder;
 			std::vector<BYTE> actual;
 			auto error = pngDecoder.Decode(actual, input.data(), imageDescriptor);
-			Assert::AreEqual(true, AssetSuite::DecoderError::ColorTypeNotSupported == error);
+			Assert::AreEqual(false, error);
 		}
 
 		TEST_METHOD(PngSuite_f00n2c08)
@@ -609,7 +609,7 @@ namespace PngDecoderUnitTests
 			AssetSuite::PngDecoder pngDecoder;
 			std::vector<BYTE> actual;
 			auto error = pngDecoder.Decode(actual, input.data(), imageDescriptor);
-			Assert::AreEqual(true, AssetSuite::DecoderError::NoDecoderError == error);
+			Assert::AreEqual(true, error);
 
 			// Test the metadata calculation
 			Assert::AreEqual((UINT)32, imageDescriptor.width);
@@ -653,7 +653,7 @@ namespace PngDecoderUnitTests
 			AssetSuite::PngDecoder pngDecoder;
 			std::vector<BYTE> actual;
 			auto error = pngDecoder.Decode(actual, input.data(), imageDescriptor);
-			Assert::AreEqual(true, AssetSuite::DecoderError::ColorTypeNotSupported == error);
+			Assert::AreEqual(false , error);
 		}
 
 		TEST_METHOD(PngSuite_f01n2c08)
@@ -969,7 +969,7 @@ namespace PngDecoderUnitTests
 			AssetSuite::PngDecoder pngDecoder;
 			std::vector<BYTE> actual;
 			auto error = pngDecoder.Decode(actual, input.data(), imageDescriptor);
-			Assert::AreEqual(true, AssetSuite::DecoderError::NoDecoderError == error);
+			Assert::AreEqual(true, error);
 
 			// Test the metadata calculation
 			Assert::AreEqual((UINT)32, imageDescriptor.width);
@@ -1015,7 +1015,7 @@ namespace PngDecoderUnitTests
 			AssetSuite::PngDecoder pngDecoder;
 			std::vector<BYTE> actual;
 			auto error = pngDecoder.Decode(actual, input.data(), imageDescriptor);
-			Assert::AreEqual(true, AssetSuite::DecoderError::ColorTypeNotSupported == error);
+			Assert::AreEqual(false, error);
 		}
 
 		TEST_METHOD(PngSuite_f02n2c08)
@@ -1296,7 +1296,7 @@ namespace PngDecoderUnitTests
 			AssetSuite::PngDecoder pngDecoder;
 			std::vector<BYTE> actual;
 			auto error = pngDecoder.Decode(actual, input.data(), imageDescriptor);
-			Assert::AreEqual(true, AssetSuite::DecoderError::NoDecoderError == error);
+			Assert::AreEqual(true, error);
 
 			// Test the metadata calculation
 			Assert::AreEqual((UINT)32, imageDescriptor.width);
@@ -1344,7 +1344,7 @@ namespace PngDecoderUnitTests
 			AssetSuite::PngDecoder pngDecoder;
 			std::vector<BYTE> actual;
 			auto error = pngDecoder.Decode(actual, input.data(), imageDescriptor);
-			Assert::AreEqual(true, AssetSuite::DecoderError::ColorTypeNotSupported == error);
+			Assert::AreEqual(false, error);
 		}
 
 		TEST_METHOD(PngSuite_f03n2c08)
@@ -1632,7 +1632,7 @@ namespace PngDecoderUnitTests
 			AssetSuite::PngDecoder pngDecoder;
 			std::vector<BYTE> actual;
 			auto error = pngDecoder.Decode(actual, input.data(), imageDescriptor);
-			Assert::AreEqual(true, AssetSuite::DecoderError::NoDecoderError == error);
+			Assert::AreEqual(true, error);
 
 			// Test the metadata calculation
 			Assert::AreEqual((UINT)32, imageDescriptor.width);
@@ -1672,7 +1672,7 @@ namespace PngDecoderUnitTests
 			AssetSuite::PngDecoder pngDecoder;
 			std::vector<BYTE> actual;
 			auto error = pngDecoder.Decode(actual, input.data(), imageDescriptor);
-			Assert::AreEqual(true, AssetSuite::DecoderError::ColorTypeNotSupported == error);
+			Assert::AreEqual(false, error);
 		}
 
 		TEST_METHOD(PngSuite_f04n2c08)
@@ -1941,7 +1941,7 @@ namespace PngDecoderUnitTests
 			AssetSuite::PngDecoder pngDecoder;
 			std::vector<BYTE> actual;
 			auto error = pngDecoder.Decode(actual, input.data(), imageDescriptor);
-			Assert::AreEqual(true, AssetSuite::DecoderError::NoDecoderError == error);
+			Assert::AreEqual(true, error);
 
 			// Test the metadata calculation
 			Assert::AreEqual((UINT)32, imageDescriptor.width);
@@ -1991,7 +1991,7 @@ namespace PngDecoderUnitTests
 			AssetSuite::PngDecoder pngDecoder;
 			std::vector<BYTE> actual;
 			auto error = pngDecoder.Decode(actual, input.data(), imageDescriptor);
-			Assert::AreEqual(true, AssetSuite::DecoderError::ColorTypeNotSupported == error);
+			Assert::AreEqual(false, error);
 		}
 	};
 
@@ -2019,7 +2019,7 @@ namespace PngDecoderUnitTests
 			AssetSuite::PngDecoder pngDecoder;
 			std::vector<BYTE> actual;
 			auto error = pngDecoder.Decode(actual, input.data(), imageDescriptor);
-			Assert::AreEqual(true, AssetSuite::DecoderError::NoDecoderError == error, L"Wrong error code");
+			Assert::AreEqual(true, error, L"Wrong error code");
 
 			// Test the metadata calculation
 			Assert::AreEqual((UINT)32, imageDescriptor.width);

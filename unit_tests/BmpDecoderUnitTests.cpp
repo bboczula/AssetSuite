@@ -54,7 +54,7 @@ namespace BmpDecoderUnitTests
 			AssetSuite::BmpDecoder bmpDecoder;
 			std::vector<BYTE> result;
 			auto error = bmpDecoder.Decode(result, input.data(), imageDescriptor);
-			Assert::AreEqual(true, AssetSuite::DecoderError::NoDecoderError == error);
+			Assert::AreEqual(true, error);
 
 			Assert::AreEqual((UINT)WIDTH, imageDescriptor.width);
 			Assert::AreEqual((UINT)HEIGHT, imageDescriptor.height);
@@ -116,7 +116,7 @@ namespace BmpDecoderUnitTests
 			AssetSuite::BmpDecoder bmpDecoder;
 			std::vector<BYTE> actual;
 			auto error = bmpDecoder.Decode(actual, input.data(), imageDescriptor);
-			Assert::AreEqual(true, AssetSuite::DecoderError::NoDecoderError == error);
+			Assert::AreEqual(true, error);
 
 			Assert::AreEqual((UINT)WIDTH, imageDescriptor.width);
 			Assert::AreEqual((UINT)HEIGHT, imageDescriptor.height);
@@ -171,7 +171,7 @@ namespace BmpDecoderUnitTests
 			AssetSuite::BmpDecoder bmpDecoder;
 			std::vector<BYTE> result;
 			auto error = bmpDecoder.Decode(result, input.data(), imageDescriptor);
-			Assert::AreEqual(true, AssetSuite::DecoderError::NoDecoderError == error);
+			Assert::AreEqual(true, error);
 
 			Assert::AreEqual(true, AssetSuite::ImageFormat::RGB8 == imageDescriptor.format);
 		}
@@ -1734,7 +1734,7 @@ namespace BmpDecoderUnitTests
 			auto error = bmpDecoder.Decode(actual, input.data(), imageDescriptor);
 
 			// Test the metadata calculation
-			Assert::AreEqual(true, AssetSuite::DecoderError::NoDecoderError == error);
+			Assert::AreEqual(true, error);
 			Assert::AreEqual((UINT)64, imageDescriptor.width);
 			Assert::AreEqual((UINT)64, imageDescriptor.height);
 			Assert::AreEqual(true, AssetSuite::ImageFormat::RGB8 == imageDescriptor.format, L"Image format is incorrect");

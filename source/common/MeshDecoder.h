@@ -6,15 +6,9 @@
 
 namespace AssetSuite
 {
-	enum MeshDecoderError
-	{
-		MeshNoDecoderError,
-		MeshColorTypeNotSupported
-	};
-
 	class MeshDecoder
 	{
 	public:
-		virtual MeshDecoderError Decode(std::vector<BYTE>& output, BYTE* buffer, MeshDescriptor& descriptor) = 0;
+		virtual bool Decode(std::vector<BYTE>& output, BYTE* buffer, MeshDescriptor& descriptor) = 0;
 	};
 }

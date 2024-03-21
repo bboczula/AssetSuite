@@ -1,6 +1,6 @@
 #include "BmpDecoder.h"
 
-AssetSuite::DecoderError AssetSuite::BmpDecoder::Decode(std::vector<BYTE>& output, BYTE* buffer, ImageDescriptor& descriptor)
+bool AssetSuite::BmpDecoder::Decode(std::vector<BYTE>& output, BYTE* buffer, ImageDescriptor& descriptor)
 {
 	BITMAPFILEHEADER fileHeader;
 	BITMAPINFOHEADER infoHeader;
@@ -50,7 +50,7 @@ AssetSuite::DecoderError AssetSuite::BmpDecoder::Decode(std::vector<BYTE>& outpu
 		}
 	}
 
-	return DecoderError::NoDecoderError;
+	return true;
 }
 
 int AssetSuite::BmpDecoder::CalculatePadding(DWORD lineSize)

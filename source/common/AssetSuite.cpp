@@ -95,7 +95,7 @@ AssetSuite::ErrorCode AssetSuite::Manager::ImageDecode(ImageDecoders decoder, Im
       }
 
       auto error = imageDecoders[(size_t)decoder]->Decode(decodedBuffer, rawBuffer.data(), descriptor);
-      return (error == DecoderError::NoDecoderError) ? ErrorCode::OK : ErrorCode::ColorTypeNotSupported;
+      return (!error) ? ErrorCode::OK : ErrorCode::ColorTypeNotSupported;
 }
 
 AssetSuite::ErrorCode AssetSuite::Manager::ImageGet(OutputFormat format, std::vector<BYTE>& output)
