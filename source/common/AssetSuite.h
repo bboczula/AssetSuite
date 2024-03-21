@@ -15,6 +15,7 @@
 #include "ImageDescriptor.h"
 #include "ImageDecoder.h"
 #include "MeshDescriptor.h"
+#include "MeshDecoder.h"
 
 // I want to be able to easily extend the interface, so I can add new file fromats
 // Or even some custom binary files, or add JPEG or even different 3D formats
@@ -115,5 +116,6 @@ namespace AssetSuite
 		PpmEncoder* ppmEncoder;
 		BypassEncoder* bypassEncoder;
 		ImageDecoder* imageDecoders[(size_t)ImageDecoders::MaxDecoders];
+		MeshDecoder* meshDecoders[(size_t)MeshDecoders::MaxDecoders];
 	};
 }
