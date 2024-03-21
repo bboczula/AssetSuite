@@ -49,7 +49,7 @@ AssetSuite::Manager::~Manager()
 	}
 }
 
-AssetSuite::ErrorCode AssetSuite::Manager::ImageLoadAndDecode(const char* filePathAndName, ImageDescriptor& descriptor, ImageDecoders decoder)
+AssetSuite::ErrorCode AssetSuite::Manager::ImageLoadAndDecode(const char* filePathAndName, ImageDecoders decoder)
 {
       auto loadResult = ImageLoad(filePathAndName);
       if (loadResult != ErrorCode::OK)
@@ -57,7 +57,7 @@ AssetSuite::ErrorCode AssetSuite::Manager::ImageLoadAndDecode(const char* filePa
             return loadResult;
       }
 
-      auto decodeResult = ImageDecode(ImageDecoders::Auto, descriptor);
+      auto decodeResult = ImageDecode(ImageDecoders::Auto);
       if (decodeResult != ErrorCode::OK)
       {
             return decodeResult;
@@ -73,7 +73,7 @@ AssetSuite::ErrorCode AssetSuite::Manager::ImageLoad(const char* filePathAndName
       return LoadFileToMemory(filePathAndName);
 }
 
-AssetSuite::ErrorCode AssetSuite::Manager::ImageDecode(ImageDecoders decoder, ImageDescriptor& descriptor)
+AssetSuite::ErrorCode AssetSuite::Manager::ImageDecode(ImageDecoders decoder)
 {
       if (rawBuffer.empty())
       {
@@ -96,11 +96,17 @@ AssetSuite::ErrorCode AssetSuite::Manager::ImageDecode(ImageDecoders decoder, Im
             }
       }
 
+      ImageDescriptor descriptor;
       auto error = imageDecoders[(size_t)decoder]->Decode(decodedBuffer, rawBuffer.data(), descriptor);
+
+      imageInfo.width = descriptor.width;
+      imageInfo.height = descriptor.height;
+      imageInfo.format = descriptor.format;
+
       return error ? ErrorCode::OK : ErrorCode::Undefined;
 }
 
-AssetSuite::ErrorCode AssetSuite::Manager::ImageGet(OutputFormat format, std::vector<BYTE>& output)
+AssetSuite::ErrorCode AssetSuite::Manager::ImageGet(OutputFormat format, std::vector<BYTE>& output, ImageDescriptor& descriptor)
 {
       if (decodedBuffer.empty())
       {
@@ -108,6 +114,10 @@ AssetSuite::ErrorCode AssetSuite::Manager::ImageGet(OutputFormat format, std::ve
       }
 
       output = decodedBuffer;
+      descriptor.width = imageInfo.width;
+      descriptor.height = imageInfo.height;
+      descriptor.format = imageInfo.format;
+
       return ErrorCode::OK;
 }
 
@@ -115,7 +125,7 @@ void AssetSuite::Manager::StoreMeshToFile(const std::string& filePathAndName, BY
 {
 }
 
-AssetSuite::ErrorCode AssetSuite::Manager::MeshLoadAndDecode(const char* filePathAndName, MeshDescriptor& descriptor, MeshDecoders decoder)
+AssetSuite::ErrorCode AssetSuite::Manager::MeshLoadAndDecode(const char* filePathAndName, MeshDecoders decoder)
 {
       auto loadResult = MeshLoad(filePathAndName);
       if (loadResult != ErrorCode::OK)
@@ -123,7 +133,7 @@ AssetSuite::ErrorCode AssetSuite::Manager::MeshLoadAndDecode(const char* filePat
             return loadResult;
       }
 
-      auto decodeResult = MeshDecode(decoder, descriptor);
+      auto decodeResult = MeshDecode(decoder);
       if (decodeResult != ErrorCode::OK)
       {
             return decodeResult;
@@ -139,7 +149,7 @@ AssetSuite::ErrorCode AssetSuite::Manager::MeshLoad(const char* filePathAndName)
       return LoadFileToMemory(filePathAndName, false);
 }
 
-AssetSuite::ErrorCode AssetSuite::Manager::MeshDecode(MeshDecoders decoder, MeshDescriptor& descriptor)
+AssetSuite::ErrorCode AssetSuite::Manager::MeshDecode(MeshDecoders decoder)
 {
       if (rawBuffer.empty())
       {
@@ -159,17 +169,20 @@ AssetSuite::ErrorCode AssetSuite::Manager::MeshDecode(MeshDecoders decoder, Mesh
       }
 
       std::vector<BYTE> output;
+      MeshDescriptor descriptor;
       auto error = meshDecoders[(size_t)decoder]->Decode(output, rawBuffer.data(), descriptor);
       return error ? ErrorCode::OK : ErrorCode::Undefined;
-
-      return ErrorCode();
 }
 
-AssetSuite::ErrorCode AssetSuite::Manager::MeshGet(const char* meshName, MeshOutputFormat format, std::vector<FLOAT>& output)
+AssetSuite::ErrorCode AssetSuite::Manager::MeshGet(const char* meshName, MeshOutputFormat format, std::vector<FLOAT>& output, MeshDescriptor& descriptor)
 {
       // Fetch the group data
       auto groupOffset = modelLoader->GetGroupOffset(meshName);
       auto groupSize = modelLoader->GetGroupSize(meshName);
+      meshInfo.numOfVertices = groupSize * 3;
+      meshInfo.numOfIndices = groupSize * 3;
+      descriptor.numOfVertices = meshInfo.numOfVertices;
+      descriptor.numOfIndices = meshInfo.numOfIndices;
 
       if (format == MeshOutputFormat::POSITION)
       {

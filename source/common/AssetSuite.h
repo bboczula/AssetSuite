@@ -83,16 +83,16 @@ namespace AssetSuite
 		~Manager();
 		
 		void StoreImageToFile(const std::string& filePathAndName, const std::vector<BYTE>& buffer, const ImageDescriptor& imageDescriptor);
-		ErrorCode ImageLoadAndDecode(const char* filePathAndName, ImageDescriptor& descriptor, ImageDecoders decoder = ImageDecoders::Auto);
+		ErrorCode ImageLoadAndDecode(const char* filePathAndName, ImageDecoders decoder = ImageDecoders::Auto);
 		ErrorCode ImageLoad(const char* filePathAndName);
-		ErrorCode ImageDecode(ImageDecoders decoder, ImageDescriptor& descriptor);
-		ErrorCode ImageGet(OutputFormat format, std::vector<BYTE>& output);
+		ErrorCode ImageDecode(ImageDecoders decoder);
+		ErrorCode ImageGet(OutputFormat format, std::vector<BYTE>& output, ImageDescriptor& descriptor);
 
 		void StoreMeshToFile(const std::string& filePathAndName, BYTE* buffer, const MeshDescriptor& imageDescriptor);
-		ErrorCode MeshLoadAndDecode(const char* filePathAndName, MeshDescriptor& descriptor, MeshDecoders decoder = MeshDecoders::Auto);
+		ErrorCode MeshLoadAndDecode(const char* filePathAndName, MeshDecoders decoder = MeshDecoders::Auto);
 		ErrorCode MeshLoad(const char* filePathAndName);
-		ErrorCode MeshDecode(MeshDecoders decoder, MeshDescriptor& descriptor);
-		ErrorCode MeshGet(const char* meshName, MeshOutputFormat format, std::vector<FLOAT>& output);
+		ErrorCode MeshDecode(MeshDecoders decoder);
+		ErrorCode MeshGet(const char* meshName, MeshOutputFormat format, std::vector<FLOAT>& output, MeshDescriptor& descriptor);
 
 		ErrorCode DumpRawBuffer();
 		ErrorCode DumpDecodedBuffer();
@@ -102,11 +102,24 @@ namespace AssetSuite
 			std::filesystem::path fullName;
 			std::filesystem::path extension;
 		};
+		struct ImageInfo
+		{
+			UINT width;
+			UINT height;
+			ImageFormat format;
+		};
+		struct MeshInfo
+		{
+			UINT numOfVertices;
+			UINT numOfIndices;
+		};
 		ErrorCode LoadFileToMemory(const std::string& fileName, bool isBinary = true);
 		void StoreMemoryToFile(const std::vector<BYTE>& buffer, const std::string& fileName);
 		void DumpByteVectorToCpp(const std::vector<BYTE>& byteVector);
 		void DumpBuffer(const std::string& fileName, const std::vector<BYTE>& buffer, ImageDescriptor& descriptor);
 		FileInfo fileInfo;
+		ImageInfo imageInfo;
+		MeshInfo meshInfo;
 		std::vector<BYTE> rawBuffer;
 		std::vector<BYTE> decodedBuffer;
 		std::vector<BYTE> formattedBuffer;
