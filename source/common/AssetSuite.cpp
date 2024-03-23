@@ -3,13 +3,12 @@
 #include "AssetSuite.h"
 
 #include "../wavefront/ModelLoader.h"
-#include "../wavefront/Image.h"
 #include "../bmp/BmpDecoder.h"
 #include "../png/PngDecoder.h"
 #include "../ppm/PpmEncoder.h"
 #include "../bypass/BypassEncoder.h"
 
-AssetSuite::Manager::Manager() : modelLoader(nullptr)
+AssetSuite::Manager::Manager() : modelLoader(nullptr), imageInfo(), meshInfo()
 {
 	modelLoader = new ModelLoader;
       bmpDecoder = new BmpDecoder;
