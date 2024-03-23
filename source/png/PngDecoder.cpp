@@ -71,7 +71,7 @@ bool AssetSuite::PngDecoder::Decode(std::vector<BYTE>& output, BYTE* buffer, Ima
 
 	std::vector<BYTE> filtered;
 	// Here you could technically interate over scanlines
-	for (int i = 0; i < descriptor.height; i++)
+	for (UINT i = 0; i < descriptor.height; i++)
 	{
 		// Index of the filtering byte
 		auto scanlineWidth = ((descriptor.width * bpp) + 1);
@@ -86,27 +86,27 @@ bool AssetSuite::PngDecoder::Decode(std::vector<BYTE>& output, BYTE* buffer, Ima
 			break;
 		case 1:
 			// Sub
-			for (int i = 1; i < scanlineWidth; i++)
+			for (UINT i = 1; i < scanlineWidth; i++)
 			{
-				UINT lastIndex = filtered.size();
+				auto lastIndex = filtered.size();
 				BYTE leftValue = i <= bpp ? 0 : filtered[lastIndex - bpp];
 				filtered.push_back(result[index + i] + leftValue);
 			}
 			break;
 		case 2:
 			// Up
-			for (int i = 1; i < scanlineWidth; i++)
+			for (UINT i = 1; i < scanlineWidth; i++)
 			{
-				UINT lastIndex = filtered.size();
+				auto lastIndex = filtered.size();
 				BYTE upValue = index + i < scanlineWidth ? 0 : filtered[lastIndex - scanlineWidth + 1];
 				filtered.push_back(result[index + i] + upValue);
 			}
 			break;
 		case 3:
 			// Average
-			for (int i = 1; i < scanlineWidth; i++)
+			for (UINT i = 1; i < scanlineWidth; i++)
 			{
-				UINT lastIndex = filtered.size();
+				auto lastIndex = filtered.size();
 				BYTE leftValue = i <= bpp ? 0 : filtered[lastIndex - bpp];
 				BYTE upValue = index + i < scanlineWidth ? 0 : filtered[lastIndex - scanlineWidth + 1];
 				filtered.push_back(result[index + i] + (leftValue + upValue) / 2);
@@ -114,11 +114,11 @@ bool AssetSuite::PngDecoder::Decode(std::vector<BYTE>& output, BYTE* buffer, Ima
 			break;
 		case 4:
 			// Peath
-			for (int i = 1; i < scanlineWidth; i++)
+			for (UINT i = 1; i < scanlineWidth; i++)
 			{
 				const BOOL isFirstLine = index + i < scanlineWidth;
 				const BOOL isFirstPixel = i <= bpp;
-				const UINT lastIndex = filtered.size();
+				const auto lastIndex = filtered.size();
 				BYTE leftValue = isFirstPixel ? 0 : filtered[lastIndex - bpp];
 				BYTE upValue = isFirstLine ? 0 : filtered[lastIndex - scanlineWidth + 1];
 				BYTE upLeftValue = isFirstLine || isFirstPixel ? 0 : filtered[lastIndex - scanlineWidth + 1 - bpp];
@@ -134,7 +134,7 @@ bool AssetSuite::PngDecoder::Decode(std::vector<BYTE>& output, BYTE* buffer, Ima
 	return true;
 }
 
-unsigned long AssetSuite::PngDecoder::Convert1Byte(const BYTE* buffer)
+BYTE AssetSuite::PngDecoder::Convert1Byte(const BYTE* buffer)
 {
 	return buffer[0];
 }

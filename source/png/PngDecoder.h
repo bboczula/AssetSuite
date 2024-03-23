@@ -94,7 +94,7 @@ namespace AssetSuite
 	private:
 		std::vector<BYTE> compressedDataBuffer;
 		std::vector<BYTE> scanlines;
-		unsigned long Convert1Byte(const BYTE* buffer);
+		BYTE Convert1Byte(const BYTE* buffer);
 		unsigned long Convert2Bytes(const BYTE* buffer);
 		unsigned long Convert4Bytes(const BYTE* buffer);
 		unsigned long ConvertBits(const BYTE* buffer, UINT& byteIndex, UINT& bitIndex, UINT numOfBits);
