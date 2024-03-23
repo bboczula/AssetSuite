@@ -703,7 +703,7 @@ int Image::decodeBMP()
     const DWORD fileLineSize = byteLineSize + padding;
 
     image.resize(height * byteLineSize);
-    for (int i = 0; i < height - 1; i++)
+    for (DWORD i = 0; i < height - 1; i++)
     {
         memcpy(image.data() + (height - 1 - i) * byteLineSize, buffer.data() + pixelDataOffset + i * fileLineSize, byteLineSize);
     }

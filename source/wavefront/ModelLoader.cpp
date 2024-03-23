@@ -238,7 +238,7 @@ MiniMath::Point2D AssetSuite::ModelLoader::GetTextureCoord(unsigned int index)
 
 unsigned int AssetSuite::ModelLoader::GenNumOfFaces()
 {
-	return faceHandler->faces.size();
+	return static_cast<unsigned int>(faceHandler->faces.size());
 }
 
 unsigned int AssetSuite::ModelLoader::GetGroupOffset(const std::string& key)
@@ -253,7 +253,7 @@ unsigned int AssetSuite::ModelLoader::GetGroupSize(const std::string& key)
 
 unsigned int AssetSuite::ModelLoader::GetNumOfGroups()
 {
-	return groupHandler->groupOffset.size();
+	return static_cast<unsigned int>(groupHandler->groupOffset.size());
 }
 
 bool AssetSuite::ModelLoader::HasGroup(const std::string& key)

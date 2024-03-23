@@ -51,7 +51,7 @@ double MiniMath::Vector3D::Length()
 
 void MiniMath::Vector3D::Normalize()
 {
-	auto length = Length();
+	float length = static_cast<float>(Length());
 	x /= length;
 	y /= length;
 	z /= length;
