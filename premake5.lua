@@ -143,8 +143,12 @@ project "DemoApplication"
 	SetReleaseFilters()
 	filter "configurations:Debug"
 		postbuildcommands { "{COPY} %{cfg.targetdir}/../bin/assetsuite_d.dll %{cfg.targetdir}" }
+		postbuildcommands { "{COPY} %{cfg.targetdir}/../../../test_images/girl_with_pearl_earring.bmp %{cfg.targetdir}" }
+		postbuildcommands { "{COPY} %{cfg.targetdir}/../../../test_images/wavefront_sample.obj %{cfg.targetdir}" }
 	filter "configurations:Release"
 		postbuildcommands { "{COPY} %{cfg.targetdir}/../bin/assetsuite_r.dll %{cfg.targetdir}" }
+		postbuildcommands { "{COPY} %{cfg.targetdir}/../../../test_images/girl_with_pearl_earring.bmp %{cfg.targetdir}" }
+		postbuildcommands { "{COPY} %{cfg.targetdir}/../../../test_images/wavefront_sample.obj %{cfg.targetdir}" }
 		
 project "UnitTest"
 	kind "SharedLib"
