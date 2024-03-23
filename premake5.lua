@@ -74,6 +74,7 @@ project "AssetSuite"
 project "zlib"
 	kind "StaticLib"
 	language "C++"
+	cppdialect "C++20"
 	targetdir "bin/%{cfg.buildcfg}/bin"
 	files { "source/zlib/**.h", "source/zlib/**.cpp" }
 	SetDebugFilters()
