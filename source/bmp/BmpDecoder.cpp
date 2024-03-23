@@ -9,7 +9,7 @@ bool AssetSuite::BmpDecoder::Decode(std::vector<BYTE>& output, BYTE* buffer, Ima
 	memcpy(&fileHeader, buffer, sizeof(BITMAPFILEHEADER));
 	memcpy(&infoHeader, buffer + sizeof(BITMAPFILEHEADER), sizeof(BITMAPINFOHEADER));
 
-	WORD pixelDataOffset = fileHeader.bfOffBits;
+	DWORD pixelDataOffset = fileHeader.bfOffBits;
 	DWORD bitsPerPixel = infoHeader.biBitCount;
 	DWORD height = infoHeader.biHeight;
 	DWORD width = infoHeader.biWidth;
@@ -29,7 +29,7 @@ bool AssetSuite::BmpDecoder::Decode(std::vector<BYTE>& output, BYTE* buffer, Ima
 	// The tricky part is, the image is upside down, it has optional padding for every line, and each pixel is in BGR, not RGB
 	//std::vector<BYTE> output;
 	output.resize(height * byteLineSize);
-	for (int i = 0; i < height; i++)
+	for (DWORD i = 0; i < height; i++)
 	{
 		memcpy(output.data() + (height - 1 - i) * byteLineSize, buffer + pixelDataOffset + i * fileLineSize, byteLineSize);
 	}
@@ -40,9 +40,9 @@ bool AssetSuite::BmpDecoder::Decode(std::vector<BYTE>& output, BYTE* buffer, Ima
 	descriptor.width = width;
 	descriptor.height = height;
 	descriptor.format = bitsPerPixel == 24 ? ImageFormat::RGB8 : ImageFormat::Unknown;
-	for (int i = 0; i < height; i++)
+	for (DWORD i = 0; i < height; i++)
 	{
-		for (int j = 0; j < width * 3; j += 3)
+		for (DWORD j = 0; j < width * 3; j += 3)
 		{
 			auto temp = output[(i * byteLineSize) + j];
 			output[(i * byteLineSize) + j] = output[(i * byteLineSize) + j + 2];
