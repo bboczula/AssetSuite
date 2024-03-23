@@ -1,3 +1,4 @@
+#pragma warning (disable : 4251)
 #include "CppUnitTest.h"
 //#include "../source/png/Huffman.h"
 //#include "../png/Huffman.cpp"

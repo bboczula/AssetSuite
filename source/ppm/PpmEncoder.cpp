@@ -40,9 +40,9 @@ std::vector<BYTE> AssetSuite::PpmEncoder::Encode(const std::vector<BYTE>& buffer
 	AppendToByteBuffer(output, 255);
 	AppendToByteBuffer(output, "\n");
 
-	for (int pixelHeight = 0; pixelHeight < descriptor.height; pixelHeight++)
+	for (UINT pixelHeight = 0; pixelHeight < descriptor.height; pixelHeight++)
 	{
-		for (int pixelWidth = 0; pixelWidth < (scanlineWidth); pixelWidth++)
+		for (UINT pixelWidth = 0; pixelWidth < (scanlineWidth); pixelWidth++)
 		{
 			// If we have alpha, we need to skip this
 			if (bpp == 4 && ((pixelWidth + 1) % 4) == 0)

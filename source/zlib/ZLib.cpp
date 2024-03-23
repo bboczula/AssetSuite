@@ -79,9 +79,12 @@ std::vector<BYTE> ZLib::Decode(const BYTE* data, size_t size)
 	std::cout << "FDICT (Preset Dictionary): " << FDICT << std::endl;
 	std::cout << "FLEVEL (Compression Level): " << FLEVEL << std::endl;
 #endif
-
+	// Here we have symbol list which is SHORT, while output is BYTE
+	// If we translate, we have short and unsigned char
+	// 
+	// 
 	// This is de-facto deflate
-	std::vector<symbol_t> symbolsList;
+	std::vector<BYTE> symbolsList;
 	Inflate(bitStream, symbolsList);
 
 	// Here you can technically do the filtering
@@ -106,7 +109,7 @@ std::vector<BYTE> ZLib::Decode(const BYTE* data, size_t size)
 	return output;
 }
 
-void ZLib::Inflate(BitStream& bitStream, std::vector<symbol_t>& symbolsList)
+void ZLib::Inflate(BitStream& bitStream, std::vector<BYTE>& symbolsList)
 {
 #if ENABLE_PRINT
 	std::cout << "2: Read the first DEFLATE block header" << std::endl;
@@ -142,7 +145,7 @@ void ZLib::Inflate(BitStream& bitStream, std::vector<symbol_t>& symbolsList)
 	}
 }
 
-void ZLib::HandleCompressedBlock(const UINT& BTYPE, BitStream& bitStream, std::vector<symbol_t>& symbolsList)
+void ZLib::HandleCompressedBlock(const UINT& BTYPE, BitStream& bitStream, std::vector<BYTE>& symbolsList)
 {
 	std::vector<UINT> literalLengthCodeLengths;
 	std::vector<UINT> distanceCodeLengths;
@@ -156,7 +159,7 @@ void ZLib::HandleCompressedBlock(const UINT& BTYPE, BitStream& bitStream, std::v
 
 		// Read the Code Lengths, 3-bits each
 		std::vector<UINT> CodeBitLengthCodes(CODE_LENGTHS_MAX_SIZE);
-		for (int i = 0; i < CODE_LENGTHS_MAX_SIZE; i++)
+		for (UINT i = 0; i < CODE_LENGTHS_MAX_SIZE; i++)
 		{
 			CodeBitLengthCodes[CodeLengthsSwizzleTable[i]] = (i < HCLEN) ? bitStream.GetBits(3) : 0;
 		}
@@ -205,7 +208,7 @@ void ZLib::HandleCompressedBlock(const UINT& BTYPE, BitStream& bitStream, std::v
 	LzssDecode(bitStream, literalLengthTree, distanceTree, symbolsList);
 }
 
-void ZLib::LzssDecode(BitStream& bitStream, HuffmanTree& literalLengthTree, HuffmanTree& distanceTree, std::vector<symbol_t>& symbolsList)
+void ZLib::LzssDecode(BitStream& bitStream, HuffmanTree& literalLengthTree, HuffmanTree& distanceTree, std::vector<BYTE>& symbolsList)
 {
 	UINT lzssIndex = 0;
 	while (true)
@@ -218,8 +221,8 @@ void ZLib::LzssDecode(BitStream& bitStream, HuffmanTree& literalLengthTree, Huff
 #if ENABLE_PRINT
 			std::cout << BOLDYELLOW << lzssIndex << " Literal symbol found: " << (UINT)symbol << RESET << std::endl;
 #endif
-			// Here we should be fine, this is a BYTE
-			symbolsList.push_back(symbol);
+			// We can savely cast here, the symbol value will be within the BYTE range
+			symbolsList.push_back(static_cast<BYTE>(symbol));
 		}
 		else if (symbol == 256)
 		{
@@ -253,8 +256,10 @@ void ZLib::LzssDecode(BitStream& bitStream, HuffmanTree& literalLengthTree, Huff
 			std::cout << GREEN << "\tgo back " << goBack << " places\n";
 #endif
 
-			const UINT N = symbolsList.size();
-			for (int z = 0; z < length; z++)
+			// Conversion from size_t to UINT
+			// ...followed by conversion from size_t to const UINT
+			const auto N = symbolsList.size();
+			for (UINT z = 0; z < length; z++)
 			{
 				// This also should be ok with the BYTE
 				symbolsList.push_back(symbolsList[N - goBack + z]);
@@ -306,7 +311,7 @@ void ZLib::ProcessCodeLengthSymbol(BitStream& bitStream, symbol_t symbol, std::v
 		repeat = bitStream.GetBits(7) + 11;
 	}
 
-	for (int i = 0; i < repeat; i++)
+	for (UINT i = 0; i < repeat; i++)
 	{
 		codeLengths.push_back(symbolToRepeat);
 	}

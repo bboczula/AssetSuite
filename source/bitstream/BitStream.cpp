@@ -46,7 +46,7 @@ UINT BitStream::GetBits(size_t numOfBits)
 		assert(false);
 	}
 
-	bitOffset += numOfBits;
+	bitOffset += static_cast<UINT>(numOfBits);
 	if (bitOffset >= 8 && bitOffset < 16)
 	{
 		bitOffset -= 8;

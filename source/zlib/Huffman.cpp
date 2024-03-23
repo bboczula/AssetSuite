@@ -202,15 +202,16 @@ void HuffmanTree::PrintPrettyTree()
 	const UINT LEAF_PADDING = 5;
 	const UINT BRANCH_PADDING = 3;
 	const UINT NUM_OF_LEVELS = 4;
-	const UINT MAX_WIDTH = std::pow(2, NUM_OF_LEVELS - 1)
-		+ ((std::pow(2, NUM_OF_LEVELS - 1) / 2) * LEAF_PADDING)
-		+ (((std::pow(2, NUM_OF_LEVELS - 1) / 2) - 1) * BRANCH_PADDING);
+	const UINT MAX_WIDTH =
+		static_cast<UINT>(std::pow(2, NUM_OF_LEVELS - 1))
+		+ static_cast<UINT>(((std::pow(2, NUM_OF_LEVELS - 1) / 2) * LEAF_PADDING))
+		+ static_cast<UINT>((((std::pow(2, NUM_OF_LEVELS - 1) / 2) - 1) * BRANCH_PADDING));
 #if ENABLE_PRINT
 	std::cout << "MAX_WIDTH: " << MAX_WIDTH << std::endl;
 #endif
 	for (int i = 0; i < NUM_OF_LEVELS; i++)
 	{
-		UINT N = floor(1.0f / (float)std::pow(2, i + 1) * MAX_WIDTH);
+		UINT N = static_cast<UINT>(floor(1.0f / (float)std::pow(2, i + 1) * MAX_WIDTH));
 		//std::cout << N << ": ";
 		for (int j = 0; j < std::pow(2, i); j++)
 		{
@@ -264,7 +265,7 @@ void HuffmanTree::GenerateTreeFromFrequencies(const SymbolList& symbols, const s
 
 	for (int i = 0; i < frequencies.size(); i++)
 	{
-		heap.push(new HuffmanNode(symbols[i], nullptr, nullptr, frequencies[i]));
+		heap.push(new HuffmanNode(static_cast<CHAR>(symbols[i]), nullptr, nullptr, static_cast<float>(frequencies[i])));
 	}
 
 	do
@@ -318,7 +319,7 @@ void HuffmanTree::GenerateTreeFromCodeTable()
 		std::cout << it->first << ") " << it->second.code << " - length " << it->second.length << ", top: " << currentNode << std::endl;
 #endif
 		// If I know the code length, I know how many branches I need to make in order to make a new node
-		for (int i = 0; i < it->second.length; i++)
+		for (UINT i = 0; i < it->second.length; i++)
 		{
 			UINT currentBit = (it->second.code & (0x1 << i)) >> i;
 #if ENABLE_PRINT

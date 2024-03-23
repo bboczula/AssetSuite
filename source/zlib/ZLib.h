@@ -53,11 +53,11 @@ class ZLib
 public:
 	std::vector<BYTE> Decode(const std::string& byteString);
 	std::vector<BYTE> Decode(const BYTE* data, size_t size);
-	void Inflate(BitStream& bitStream, std::vector<symbol_t>& symbolsList);
+	void Inflate(BitStream& bitStream, std::vector<BYTE>& symbolsList);
 	std::vector<BYTE> Decode(const std::vector<BYTE>& byteStream);
 private:
-	void HandleCompressedBlock(const UINT& BTYPE, BitStream& bitStream, std::vector<symbol_t>& symbolsList);
-	void LzssDecode(BitStream& bitStream, HuffmanTree& literalLengthTree, HuffmanTree& distanceTree, std::vector<symbol_t>& symbolsList);
+	void HandleCompressedBlock(const UINT& BTYPE, BitStream& bitStream, std::vector<BYTE>& symbolsList);
+	void LzssDecode(BitStream& bitStream, HuffmanTree& literalLengthTree, HuffmanTree& distanceTree, std::vector<BYTE>& symbolsList);
 	void ExtractSymbol(BitStream& bitStream, HuffmanTree& testHuffmanTree, symbol_t& symbol);
 	void ProcessCodeLengthSymbol(BitStream& bitStream, symbol_t symbol, std::vector<UINT>& codeLengths);
 	BYTE Char2Byte(CHAR c);

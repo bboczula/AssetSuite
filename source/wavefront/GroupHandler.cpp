@@ -14,7 +14,7 @@ bool GroupHandler::Condition(const std::vector<std::string>& tokens)
 
 void GroupHandler::Handle(const std::vector<std::string>& tokens)
 {
-	groupOffset.push_back(std::make_pair(tokens[1], faceHandler->faces.size()));
+	groupOffset.push_back(std::make_pair(tokens[1], static_cast<unsigned int>(faceHandler->faces.size())));
 }
 
 void GroupHandler::Reset()
@@ -24,13 +24,14 @@ void GroupHandler::Reset()
 
 unsigned int GroupHandler::GetGroupOffset(const std::string& key)
 {
-	for (int i = 0; i < groupOffset.size(); i++)
+	for (auto i = 0; i < groupOffset.size(); i++)
 	{
 		if (groupOffset[i].first.compare(key) == 0)
 		{
 			return groupOffset[i].second;
 		}
 	}
+	return 0;
 }
 
 unsigned int GroupHandler::GetGroupSize(const std::string& key)
@@ -42,7 +43,7 @@ unsigned int GroupHandler::GetGroupSize(const std::string& key)
 			auto currentGroupOffset = groupOffset[i].second;
 			if (i == groupOffset.size() - 1)
 			{
-				return faceHandler->faces.size() - currentGroupOffset;
+				return static_cast<unsigned int>(faceHandler->faces.size()) - currentGroupOffset;
 			}
 			else
 			{

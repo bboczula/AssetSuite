@@ -1,3 +1,5 @@
+#pragma warning (disable : 4251)
+
 #include "AssetSuite.h"
 
 #include "../wavefront/ModelLoader.h"
@@ -188,7 +190,7 @@ AssetSuite::ErrorCode AssetSuite::Manager::MeshGet(const char* meshName, MeshOut
       {
             // Each face has three vertices, each vertex has four elements
             output.resize(groupSize * 3 * 4);
-            for (int i = 0; i < groupSize; i++)
+            for (UINT i = 0; i < groupSize; i++)
             {
                   auto face = modelLoader->GetFace(i + groupOffset);
                   for (int j = 0; j < 3; j++)
@@ -204,7 +206,7 @@ AssetSuite::ErrorCode AssetSuite::Manager::MeshGet(const char* meshName, MeshOut
       else if (format == MeshOutputFormat::NORMAL)
       {
             output.resize(groupSize * 3 * 4);
-            for (int i = 0; i < groupSize; i++)
+            for (UINT i = 0; i < groupSize; i++)
             {
                   auto face = modelLoader->GetFace(i + groupOffset);
                   for (int j = 0; j < 3; j++)
@@ -220,7 +222,7 @@ AssetSuite::ErrorCode AssetSuite::Manager::MeshGet(const char* meshName, MeshOut
       else if (format == MeshOutputFormat::TANGENT)
       {
             output.resize(groupSize * 3 * 4);
-            for (int i = 0; i < groupSize; i++)
+            for (UINT i = 0; i < groupSize; i++)
             {
                   auto face = modelLoader->GetFace(i + groupOffset);
                   for (int j = 0; j < 3; j++)
@@ -236,7 +238,7 @@ AssetSuite::ErrorCode AssetSuite::Manager::MeshGet(const char* meshName, MeshOut
       else if (format == MeshOutputFormat::TEXCOORD)
       {
             output.resize(groupSize * 3 * 2);
-            for (int i = 0; i < groupSize; i++)
+            for (UINT i = 0; i < groupSize; i++)
             {
                   auto face = modelLoader->GetFace(i + groupOffset);
                   for (int j = 0; j < 3; j++)
