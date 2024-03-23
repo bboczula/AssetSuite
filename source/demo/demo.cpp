@@ -11,7 +11,7 @@ void main()
 	std::cout << "Hello, AssetSuite!" << std::endl;
 
 	AssetSuite::ImageDescriptor imageDescriptor = {};
-	auto errorCode = assetManager.ImageLoadAndDecode("paint-01-24bpp.bmp");
+	auto errorCode = assetManager.ImageLoadAndDecode("girl_with_pearl_earring.bmp");
 
 #if DUMP_BUFFERS
 	assetManager.DumpRawBuffer();
