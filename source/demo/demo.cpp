@@ -1,3 +1,4 @@
+#pragma warning (disable : 4251)
 #include <iostream>
 #include <vector>
 #include "../common/AssetSuite.h"
