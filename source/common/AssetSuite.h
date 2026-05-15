@@ -5,7 +5,7 @@
 #include <filesystem>
 #include <Windows.h>
 
-#include "../../include/AssetSuite/AssetSuite.h"
+#include <AssetSuite/AssetSuite.h>
 
 #include "ImageDescriptor.h"
 #include "ImageDecoder.h"

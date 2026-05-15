@@ -1,7 +1,7 @@
 #pragma once
 
 #if defined(_WIN32)
-#if defined(ASSETSUITE_EXPORTS)
+#if defined(ASSETSUITE_BUILD_DLL) || defined(ASSETSUITE_EXPORTS)
 #define ASSET_SUITE_API __declspec(dllexport)
 #else
 #define ASSET_SUITE_API __declspec(dllimport)
