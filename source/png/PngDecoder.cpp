@@ -9,6 +9,9 @@ bool AssetSuite::PngDecoder::Decode(std::vector<BYTE>& output, BYTE* buffer, Ima
 	// Reset the buffers in case you  are reading multiple files
 	scanlines.clear();
 	compressedDataBuffer.clear();
+	palette.clear();
+	bitDepth = 0;
+	colorType = 0;
 
 	// First 8 bytes is the signature, followed by chunks
 	//size_t totalSize = sizeof(BYTE) * 8;
@@ -60,7 +63,11 @@ bool AssetSuite::PngDecoder::Decode(std::vector<BYTE>& output, BYTE* buffer, Ima
 	auto result = zlib.Decode(compressedDataBuffer);
 
 	UINT bpp = 0;
-	if (descriptor.format == ImageFormat::RGB8)
+	if (colorType == ColorType::IndexedColor)
+	{
+		bpp = 1;
+	}
+	else if (descriptor.format == ImageFormat::RGB8)
 	{
 		bpp = 3;
 	}
@@ -74,7 +81,10 @@ bool AssetSuite::PngDecoder::Decode(std::vector<BYTE>& output, BYTE* buffer, Ima
 	for (UINT i = 0; i < descriptor.height; i++)
 	{
 		// Index of the filtering byte
-		auto scanlineWidth = ((descriptor.width * bpp) + 1);
+		auto scanlineDataWidth = descriptor.format == ImageFormat::RGB8 && colorType == ColorType::IndexedColor
+			? ((descriptor.width * bitDepth + 7) / 8)
+			: (descriptor.width * bpp);
+		auto scanlineWidth = scanlineDataWidth + 1;
 		auto index = (i * scanlineWidth);
 		//std::copy(result.begin() + index + 1, result.begin() + index + 1 + (descriptor.width * bpp), std::back_inserter(filtered));
 		auto value = result[index];
@@ -130,7 +140,31 @@ bool AssetSuite::PngDecoder::Decode(std::vector<BYTE>& output, BYTE* buffer, Ima
 			break;
 		}
 	}
-	output = filtered;
+	if (descriptor.format == ImageFormat::RGB8 && colorType == ColorType::IndexedColor)
+	{
+		output.clear();
+		output.reserve(descriptor.width * descriptor.height * 3);
+		for (UINT i = 0; i < descriptor.width * descriptor.height; i++)
+		{
+			const UINT bitOffset = i * bitDepth;
+			const UINT byteIndex = bitOffset / 8;
+			const UINT shift = 8 - bitDepth - (bitOffset % 8);
+			const BYTE mask = (1 << bitDepth) - 1;
+			const auto paletteIndex = (filtered[byteIndex] >> shift) & mask;
+			auto paletteOffset = paletteIndex * 3;
+			if (paletteOffset + 2 >= palette.size())
+			{
+				return false;
+			}
+			output.push_back(palette[paletteOffset]);
+			output.push_back(palette[paletteOffset + 1]);
+			output.push_back(palette[paletteOffset + 2]);
+		}
+	}
+	else
+	{
+		output = filtered;
+	}
 	return true;
 }
 
@@ -231,6 +265,12 @@ bool AssetSuite::PngDecoder::ConsumeChunk(ChunkMetadata& chunk, BYTE* dataPointe
 #endif
 		Process_IHDR(chunk.Data, descriptor);
 		return false;
+	case(ChunkType::PLTE):
+#if ENABLE_PRINT
+		std::cout << "PLTE\n";
+#endif
+		Process_PLTE(chunk.Data, chunk.Length);
+		return false;
 	case(ChunkType::IEND):
 #if ENABLE_PRINT
 		std::cout << "IEND\n";
@@ -280,6 +320,10 @@ AssetSuite::ChunkType AssetSuite::PngDecoder::BytesToChunkType(const BYTE* buffe
 	else if (strcmp((char*)pngTypeNull, "sRGB\0") == 0)
 	{
 		return ChunkType::sRGB;
+	}
+	else if (strcmp((char*)pngTypeNull, "PLTE\0") == 0)
+	{
+		return ChunkType::PLTE;
 	}
 	else if (strcmp((char*)pngTypeNull, "gAMA\0") == 0)
 	{
@@ -342,6 +386,14 @@ void AssetSuite::PngDecoder::Process_IDAT(BYTE* chunkData, UINT chunkDataLength)
 #endif
 }
 
+void AssetSuite::PngDecoder::Process_PLTE(BYTE* chunkData, UINT chunkDataLength)
+{
+	palette.insert(palette.end(), chunkData, chunkData + chunkDataLength);
+#if ENABLE_PRINT
+	std::cout << "\tcontains " << chunkDataLength / 3 << " palette entries" << std::endl;
+#endif
+}
+
 BYTE AssetSuite::PngDecoder::PaethPreditor(BYTE left, BYTE up, BYTE upperLeft)
 {
 	auto p = left + up - upperLeft;
@@ -371,8 +423,10 @@ void AssetSuite::PngDecoder::Process_IHDR(BYTE* chunkData, ImageDescriptor& desc
 	chunk.height = Convert4Bytes(chunkData + (sizeof(BYTE) * 4));
 	//totalSize += sizeof(BYTE) * 4;
 	chunk.bitDepth = Convert1Byte(chunkData + (sizeof(BYTE) * 8));
+	bitDepth = chunk.bitDepth;
 	//totalSize += sizeof(BYTE);
 	chunk.colorType = Convert1Byte(chunkData + (sizeof(BYTE) * 9));
+	colorType = chunk.colorType;
 	//totalSize += sizeof(BYTE);
 	chunk.compressionMethod = Convert1Byte(chunkData + (sizeof(BYTE) * 10));
 	//totalSize += sizeof(BYTE);
@@ -390,6 +444,10 @@ void AssetSuite::PngDecoder::Process_IHDR(BYTE* chunkData, ImageDescriptor& desc
 	else if (chunk.colorType == 6)
 	{
 		descriptor.format = ImageFormat::RGBA8;
+	}
+	else if (chunk.colorType == 3)
+	{
+		descriptor.format = ImageFormat::RGB8;
 	}
 	else
 	{

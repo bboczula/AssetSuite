@@ -11,6 +11,7 @@ namespace AssetSuite
 	enum class ChunkType
 	{
 		IHDR,
+		PLTE,
 		sRGB,
 		gAMA,
 		pHYs,
@@ -93,7 +94,10 @@ namespace AssetSuite
 		bool Decode(std::vector<BYTE>& output, BYTE* buffer, ImageDescriptor& descriptor) override;
 	private:
 		std::vector<BYTE> compressedDataBuffer;
+		std::vector<BYTE> palette;
 		std::vector<BYTE> scanlines;
+		BYTE bitDepth;
+		BYTE colorType;
 		BYTE Convert1Byte(const BYTE* buffer);
 		unsigned long Convert2Bytes(const BYTE* buffer);
 		unsigned long Convert4Bytes(const BYTE* buffer);
@@ -101,6 +105,7 @@ namespace AssetSuite
 		bool ConsumeChunk(ChunkMetadata& chunk, BYTE* dataPointer, ImageDescriptor& descriptor);
 		ChunkType BytesToChunkType(const BYTE* buffer);
 		void Process_IHDR(BYTE* chunkData, ImageDescriptor& descriptor);
+		void Process_PLTE(BYTE* chunkData, UINT chunkDataLength);
 		void Process_sRGB(BYTE* chunkData);
 		void Process_gAMA(BYTE* chunkData);
 		void Process_pHYs(BYTE* chunkData);
