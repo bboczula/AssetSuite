@@ -32,6 +32,10 @@ errorCode = assetManager.MeshGet("Plane_Plane\r", AssetSuite::MeshOutputFormat::
 ## Integration
 This library provides two sets of DLLs and LIBs, one for Release and one for Debug configuration. This is important, since this library uses STL, and having one DLL would lead to errors. There is also a set of common headers that need to be included.
 
+## AssetSuite 2.0 SDK Headers
+The AssetSuite 2.0 public SDK surface is being introduced under `include/AssetSuite`.
+External consumers should include `<AssetSuite/AssetSuite.h>` from that public include root. These headers define the SDK-facing result/version contract, opaque handles, and plain descriptor structs without requiring `Windows.h`, STL containers, or internal implementation headers.
+
 ## Installation
 The library could be built from the source using Premake (I find it much easier and intuitive then CMake) or you can use pre-built binaries provided with the release.
 
