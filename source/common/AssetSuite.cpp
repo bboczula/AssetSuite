@@ -8,6 +8,11 @@
 #include "../ppm/PpmEncoder.h"
 #include "../bypass/BypassEncoder.h"
 
+namespace
+{
+	constexpr AssetSuite::Version ASSET_SUITE_VERSION = { 2, 0, 0, 0 };
+}
+
 AssetSuite::Manager::Manager() : modelLoader(nullptr), imageInfo(), meshInfo()
 {
 	modelLoader = new ModelLoader;
