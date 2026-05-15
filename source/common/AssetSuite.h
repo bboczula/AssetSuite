@@ -1,17 +1,11 @@
 #pragma once
 
-// This is not great, maybe figure out better naming
-#ifdef ASSETSUITE_EXPORTS
-#define ASSET_SUITE_EXPORTS __declspec(dllexport)
-#else
-#define ASSET_SUITE_EXPORTS __declspec(dllimport)
-#endif
-
-#include <cstdint>
 #include <string>
 #include <vector>
 #include <filesystem>
 #include <Windows.h>
+
+#include "../../include/AssetSuite/AssetSuite.h"
 
 #include "ImageDescriptor.h"
 #include "ImageDecoder.h"
@@ -29,32 +23,6 @@ namespace AssetSuite
 	class PngDecoder;
 	class PpmEncoder;
 	class BypassEncoder;
-
-	enum class ASSET_SUITE_EXPORTS Result : int32_t
-	{
-		Success = 0,
-		WarningUnsupportedChunk = 1,
-
-		ErrorInvalidArgument = -1,
-		ErrorUnsupportedFormat = -2,
-		ErrorFileNotFound = -3,
-		ErrorDecodeFailed = -4,
-		ErrorOutputBufferTooSmall = -5,
-		ErrorOutOfMemory = -6,
-		ErrorInvalidContext = -7,
-		ErrorUnknown = -1000
-	};
-
-	struct ASSET_SUITE_EXPORTS Version
-	{
-		uint16_t major;
-		uint16_t minor;
-		uint16_t patch;
-		uint16_t reserved;
-	};
-
-	ASSET_SUITE_EXPORTS Result GetVersion(Version* outVersion);
-	ASSET_SUITE_EXPORTS const char* GetResultString(Result result);
 
 	enum class ASSET_SUITE_EXPORTS ImageDecoders
 	{

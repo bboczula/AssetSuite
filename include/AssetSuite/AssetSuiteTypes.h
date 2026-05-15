@@ -1,0 +1,60 @@
+#pragma once
+
+#include <cstdint>
+
+#include "AssetSuiteExport.h"
+
+namespace AssetSuite
+{
+	enum class Result : int32_t
+	{
+		Success = 0,
+		WarningUnsupportedChunk = 1,
+
+		ErrorInvalidArgument = -1,
+		ErrorUnsupportedFormat = -2,
+		ErrorFileNotFound = -3,
+		ErrorDecodeFailed = -4,
+		ErrorOutputBufferTooSmall = -5,
+		ErrorOutOfMemory = -6,
+		ErrorInvalidContext = -7,
+		ErrorUnknown = -1000
+	};
+
+	struct Version
+	{
+		uint16_t major;
+		uint16_t minor;
+		uint16_t patch;
+		uint16_t reserved;
+	};
+
+	enum class PixelFormat : uint32_t
+	{
+		Unknown = 0,
+		RGB8 = 1,
+		RGBA8 = 2
+	};
+
+	enum class AssetFormat : uint32_t
+	{
+		Unknown = 0,
+		BMP = 1,
+		PNG = 2,
+		PPM = 3,
+		WavefrontObj = 4
+	};
+
+	enum class MeshAttributeFlags : uint32_t
+	{
+		None = 0,
+		Position = 1u << 0,
+		Normal = 1u << 1,
+		Tangent = 1u << 2,
+		TexCoord = 1u << 3,
+		Index = 1u << 4
+	};
+
+	ASSET_SUITE_API Result GetVersion(Version* outVersion);
+	ASSET_SUITE_API const char* GetResultString(Result result);
+}

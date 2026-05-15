@@ -3,9 +3,10 @@
 -- Global Variables
 CREATE_LIB_DIRECTORY = "{MKDIR} %{cfg.targetdir}/../lib"
 CREATE_INC_DIRECTORY = "{MKDIR} %{cfg.targetdir}/../inc"
+CREATE_PUBLIC_INC_DIRECTORY = "{MKDIR} %{cfg.targetdir}/../inc/AssetSuite"
 COPY_RELEASE_LIB_FILE = "{COPY} %{cfg.targetdir}/assetsuite_r.lib %{cfg.targetdir}/../lib"
 COPY_DEBUG_LIB_FILE = "{COPY} %{cfg.targetdir}/assetsuite_d.lib %{cfg.targetdir}/../lib"
-COPY_HEADER_FILES = "{COPY} %{cfg.targetdir}/../../../source/common/*.h %{cfg.targetdir}/../inc"
+COPY_HEADER_FILES = "{COPY} %{cfg.targetdir}/../../../include/AssetSuite/*.h %{cfg.targetdir}/../inc/AssetSuite"
 LOCATION_DIRECTORY_NAME = "build"
 
 -- Global Functions
@@ -33,6 +34,8 @@ workspace "AssetSuite"
 	location(LOCATION_DIRECTORY_NAME)
 	group "UnitTests"
 		project "UnitTest"
+	group "Validation"
+		project "PublicHeaderCompile"
 	group "AssetSuite"
 		project "AssetSuite"
 		project "zlib"
@@ -57,9 +60,11 @@ project "AssetSuite"
 	postbuildcommands {
 		CREATE_LIB_DIRECTORY,
 		CREATE_INC_DIRECTORY,
+		CREATE_PUBLIC_INC_DIRECTORY,
 		COPY_HEADER_FILES
 	}
     files {
+		"include/AssetSuite/**.h",
 		"source/common/**.h", "source/common/**.cpp"
 	}
 	SetDebugFilters()
@@ -165,3 +170,13 @@ project "UnitTest"
 	filter "configurations:Release"
 		postbuildcommands { "{COPY} %{cfg.targetdir}/../bin/assetsuite_r.dll %{cfg.targetdir}" }
 		postbuildcommands { "{COPY} %{cfg.targetdir}/../../../test_images/* %{cfg.targetdir}" }
+
+project "PublicHeaderCompile"
+	kind "ConsoleApp"
+	language "C++"
+	cppdialect "C++20"
+	targetdir "bin/%{cfg.buildcfg}/validation"
+	files { "validation/public_header_compile/**.cpp" }
+	includedirs { "include" }
+	SetDebugFilters()
+	SetReleaseFilters()
