@@ -53,6 +53,9 @@ namespace AssetSuite
 		uint16_t reserved;
 	};
 
+	ASSET_SUITE_EXPORTS Result GetVersion(Version* outVersion);
+	ASSET_SUITE_EXPORTS const char* GetResultString(Result result);
+
 	enum class ASSET_SUITE_EXPORTS ImageDecoders
 	{
 		Auto,
