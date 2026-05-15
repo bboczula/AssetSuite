@@ -7,18 +7,18 @@
 
 #define ENABLE_PRINT 0
 
-AssetSuite::Result HuffmanTree::GetSymbol(symbol_t& symbol, UINT code, UINT codeLength)
+AssetSuite::HuffmanResult HuffmanTree::GetSymbol(symbol_t& symbol, UINT code, UINT codeLength)
 {
 	if (!codeLength)
 	{
 		symbol = '?';
-		return AssetSuite::Result::SymbolNotUsed;
+		return AssetSuite::HuffmanResult::SymbolNotUsed;
 	}
 
 	if (!codeTable.size())
 	{
 		symbol = '?';
-		return AssetSuite::Result::CodeTableIsEmpty;
+		return AssetSuite::HuffmanResult::CodeTableIsEmpty;
 	}
 
 	for (auto it = codeTable.begin(); it != codeTable.end(); it++)
@@ -26,11 +26,11 @@ AssetSuite::Result HuffmanTree::GetSymbol(symbol_t& symbol, UINT code, UINT code
 		if ((it->second.length == codeLength) && (it->second.code == code))
 		{
 			symbol = it->first;
-			return AssetSuite::Result::OK;
+			return AssetSuite::HuffmanResult::OK;
 		}
 	}
 	symbol = '?';
-	return AssetSuite::Result::SymbolNotFound;
+	return AssetSuite::HuffmanResult::SymbolNotFound;
 }
 
 void HuffmanTree::BuildFromLengths(const std::vector<UINT>& codeLengths)

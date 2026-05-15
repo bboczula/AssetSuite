@@ -276,7 +276,7 @@ void ZLib::ExtractSymbol(BitStream& bitStream, HuffmanTree& testHuffmanTree, sym
 {
 	UINT currentCode = bitStream.GetBits(1);
 	UINT currentSize = 1;
-	while (AssetSuite::Result::OK != testHuffmanTree.GetSymbol(symbol, currentCode, currentSize))
+	while (AssetSuite::HuffmanResult::OK != testHuffmanTree.GetSymbol(symbol, currentCode, currentSize))
 	{
 		// Here the code wasn't found, so we need another bit
 		UINT nextBit = bitStream.GetBits(1);

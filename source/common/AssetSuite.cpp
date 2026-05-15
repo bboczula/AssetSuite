@@ -8,6 +8,51 @@
 #include "../ppm/PpmEncoder.h"
 #include "../bypass/BypassEncoder.h"
 
+namespace
+{
+	constexpr AssetSuite::Version ASSET_SUITE_VERSION = { 2, 0, 0, 0 };
+}
+
+AssetSuite::Result AssetSuite::GetVersion(Version* outVersion)
+{
+	if (!outVersion)
+	{
+		return Result::ErrorInvalidArgument;
+	}
+
+	*outVersion = ASSET_SUITE_VERSION;
+	return Result::Success;
+}
+
+const char* AssetSuite::GetResultString(Result result)
+{
+	switch (result)
+	{
+	case Result::Success:
+		return "Success";
+	case Result::WarningUnsupportedChunk:
+		return "Warning: unsupported chunk";
+	case Result::ErrorInvalidArgument:
+		return "Error: invalid argument";
+	case Result::ErrorUnsupportedFormat:
+		return "Error: unsupported format";
+	case Result::ErrorFileNotFound:
+		return "Error: file not found";
+	case Result::ErrorDecodeFailed:
+		return "Error: decode failed";
+	case Result::ErrorOutputBufferTooSmall:
+		return "Error: output buffer too small";
+	case Result::ErrorOutOfMemory:
+		return "Error: out of memory";
+	case Result::ErrorInvalidContext:
+		return "Error: invalid context";
+	case Result::ErrorUnknown:
+		return "Error: unknown";
+	default:
+		return "Unknown result";
+	}
+}
+
 AssetSuite::Manager::Manager() : modelLoader(nullptr), imageInfo(), meshInfo()
 {
 	modelLoader = new ModelLoader;

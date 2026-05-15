@@ -54,7 +54,7 @@ struct HuffmanNode
 
 namespace AssetSuite
 {
-	enum Result
+	enum HuffmanResult
 	{
 		OK,
 		SymbolNotFound,
@@ -78,8 +78,8 @@ public:
 	/// <param name="symbol">Reference to a variable, where the found symbol would be put.</param>
 	/// <param name="code">A code to find, presented as unsigned integer</param>
 	/// <param name="codeLength">A code length of the symbol</param>
-	/// <returns>A Result::OK if symbol was found, and error in other case</returns>
-	AssetSuite::Result GetSymbol(symbol_t& symbol, UINT code, UINT codeLength);
+	/// <returns>A HuffmanResult::OK if symbol was found, and error in other case</returns>
+	AssetSuite::HuffmanResult GetSymbol(symbol_t& symbol, UINT code, UINT codeLength);
 
 	// We could have a GetSymbol function that takes different arguments, like without the code length, and maybe traverse the tree
 	// I wonder though, would that have to be a string? With MaxLength maybe?

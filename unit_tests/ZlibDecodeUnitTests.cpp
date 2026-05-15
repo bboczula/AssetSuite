@@ -24,8 +24,8 @@ namespace ZlibDecodeUnitTests
 			for (UINT i = 0; i < expectedCodes.size(); i++)
 			{
 				symbol_t outputSymbol;
-				AssetSuite::Result result = tree.GetSymbol(outputSymbol, expectedCodes[i], lengths[i]);
-				Assert::AreEqual(AssetSuite::Result::OK == result, true);
+				AssetSuite::HuffmanResult result = tree.GetSymbol(outputSymbol, expectedCodes[i], lengths[i]);
+				Assert::AreEqual(AssetSuite::HuffmanResult::OK == result, true);
 				Assert::AreEqual(symbols[i], outputSymbol);
 			}
 		}
@@ -42,8 +42,8 @@ namespace ZlibDecodeUnitTests
 			for (UINT i = 0; i < expectedCodes.size(); i++)
 			{
 				symbol_t outputSymbol;
-				AssetSuite::Result result = tree.GetSymbol(outputSymbol, expectedCodes[i], lengths[i]);
-				Assert::AreEqual(AssetSuite::Result::OK == result, true);
+				AssetSuite::HuffmanResult result = tree.GetSymbol(outputSymbol, expectedCodes[i], lengths[i]);
+				Assert::AreEqual(AssetSuite::HuffmanResult::OK == result, true);
 				Assert::AreEqual(symbols[i], outputSymbol);
 			}
 		}
@@ -60,8 +60,8 @@ namespace ZlibDecodeUnitTests
 			for (UINT i = 0; i < expectedCodes.size(); i++)
 			{
 				symbol_t outputSymbol;
-				AssetSuite::Result result = tree.GetSymbol(outputSymbol, expectedCodes[i], lengths[i]);
-				Assert::AreEqual(AssetSuite::Result::OK == result, true);
+				AssetSuite::HuffmanResult result = tree.GetSymbol(outputSymbol, expectedCodes[i], lengths[i]);
+				Assert::AreEqual(AssetSuite::HuffmanResult::OK == result, true);
 				Assert::AreEqual(symbols[i], outputSymbol);
 			}
 		}
@@ -78,8 +78,8 @@ namespace ZlibDecodeUnitTests
 			for (UINT i = 0; i < expectedCodes.size(); i++)
 			{
 				symbol_t outputSymbol;
-				AssetSuite::Result result = tree.GetSymbol(outputSymbol, expectedCodes[i], lengths[i]);
-				Assert::AreEqual(AssetSuite::Result::OK == result, true, L"GetSymbol() failed for some reason");
+				AssetSuite::HuffmanResult result = tree.GetSymbol(outputSymbol, expectedCodes[i], lengths[i]);
+				Assert::AreEqual(AssetSuite::HuffmanResult::OK == result, true, L"GetSymbol() failed for some reason");
 				Assert::AreEqual(symbols[i], outputSymbol);
 			}
 		}
@@ -96,8 +96,8 @@ namespace ZlibDecodeUnitTests
 			for (UINT i = 0; i < expectedCodes.size(); i++)
 			{
 				symbol_t outputSymbol;
-				AssetSuite::Result result = tree.GetSymbol(outputSymbol, expectedCodes[i], lengths[i]);
-				Assert::AreEqual(AssetSuite::Result::OK == result, true, L"GetSymbol() failed for some reason");
+				AssetSuite::HuffmanResult result = tree.GetSymbol(outputSymbol, expectedCodes[i], lengths[i]);
+				Assert::AreEqual(AssetSuite::HuffmanResult::OK == result, true, L"GetSymbol() failed for some reason");
 				Assert::AreEqual(symbols[i], outputSymbol);
 			}
 		}
@@ -116,8 +116,8 @@ namespace ZlibDecodeUnitTests
 			for (UINT i = 0; i < expectedCodes.size(); i++)
 			{
 				symbol_t outputSymbol;
-				AssetSuite::Result result = tree.GetSymbol(outputSymbol, expectedCodes[i], expectedLengths[i]);
-				Assert::AreEqual(AssetSuite::Result::OK == result, true, L"GetSymbol() failed for some reason");
+				AssetSuite::HuffmanResult result = tree.GetSymbol(outputSymbol, expectedCodes[i], expectedLengths[i]);
+				Assert::AreEqual(AssetSuite::HuffmanResult::OK == result, true, L"GetSymbol() failed for some reason");
 				Assert::AreEqual(expectedSymbols[i], outputSymbol);
 			}
 		}
@@ -140,8 +140,8 @@ namespace ZlibDecodeUnitTests
 				if (lengths[i] != 0)
 				{
 					symbol_t outputSymbol;
-					AssetSuite::Result result = tree.GetSymbol(outputSymbol, expectedCodes[i], lengths[i]);
-					Assert::AreEqual(AssetSuite::Result::OK == result, true, L"Get symbol returned the error, even though it shouldn't");
+					AssetSuite::HuffmanResult result = tree.GetSymbol(outputSymbol, expectedCodes[i], lengths[i]);
+					Assert::AreEqual(AssetSuite::HuffmanResult::OK == result, true, L"Get symbol returned the error, even though it shouldn't");
 					Assert::AreEqual(symbols[i], outputSymbol, L"Incorrect symbol was returned");
 				}
 			}
@@ -162,8 +162,8 @@ namespace ZlibDecodeUnitTests
 				if (lengths[i] != 0)
 				{
 					symbol_t outputSymbol;
-					AssetSuite::Result result = tree.GetSymbol(outputSymbol, expectedCodes[i], lengths[i]);
-					Assert::AreEqual(AssetSuite::Result::OK == result, true, L"Get symbol returned the error, even though it shouldn't");
+					AssetSuite::HuffmanResult result = tree.GetSymbol(outputSymbol, expectedCodes[i], lengths[i]);
+					Assert::AreEqual(AssetSuite::HuffmanResult::OK == result, true, L"Get symbol returned the error, even though it shouldn't");
 					Assert::AreEqual(symbols[i], outputSymbol, L"Incorrect symbol was returned");
 				}
 			}
@@ -184,8 +184,8 @@ namespace ZlibDecodeUnitTests
 				if (expectedLengths[i] != 0)
 				{
 					symbol_t outputSymbol;
-					AssetSuite::Result result = tree.GetSymbol(outputSymbol, expectedCodes[i], expectedLengths[i]);
-					Assert::AreEqual(AssetSuite::Result::OK == result, true, L"Get symbol returned the error, even though it shouldn't");
+					AssetSuite::HuffmanResult result = tree.GetSymbol(outputSymbol, expectedCodes[i], expectedLengths[i]);
+					Assert::AreEqual(AssetSuite::HuffmanResult::OK == result, true, L"Get symbol returned the error, even though it shouldn't");
 					Assert::AreEqual(symbols[i], outputSymbol, L"Incorrect symbol was returned");
 				}
 			}
@@ -203,16 +203,16 @@ namespace ZlibDecodeUnitTests
 			HuffmanTree tree;
 			tree.BuildFromLengths(symbols, lengths);
 			symbol_t outputSymbol;
-			AssetSuite::Result result = tree.GetSymbol(outputSymbol, 0, 3);
-			Assert::AreEqual(AssetSuite::Result::SymbolNotFound == result, true, L"Symbol was found, while it shouldn't");
+			AssetSuite::HuffmanResult result = tree.GetSymbol(outputSymbol, 0, 3);
+			Assert::AreEqual(AssetSuite::HuffmanResult::SymbolNotFound == result, true, L"Symbol was found, while it shouldn't");
 		}
 
 		TEST_METHOD(CodeTableIsEmpty)
 		{
 			HuffmanTree tree;
 			symbol_t outputSymbol;
-			AssetSuite::Result result = tree.GetSymbol(outputSymbol, 0, 3);
-			Assert::AreEqual(AssetSuite::Result::CodeTableIsEmpty == result, true, L"Code Table is not empty, while it should");
+			AssetSuite::HuffmanResult result = tree.GetSymbol(outputSymbol, 0, 3);
+			Assert::AreEqual(AssetSuite::HuffmanResult::CodeTableIsEmpty == result, true, L"Code Table is not empty, while it should");
 		}
 
 		TEST_METHOD(SymbolNotFoundForZeroLength)
@@ -224,8 +224,8 @@ namespace ZlibDecodeUnitTests
 			HuffmanTree tree;
 			tree.BuildFromLengths(symbols, lengths);
 			symbol_t outputSymbol;
-			AssetSuite::Result result = tree.GetSymbol(outputSymbol, 2, 0);
-			Assert::AreEqual(AssetSuite::Result::SymbolNotUsed == result, true, L"Symbol was found, even though we asked for code length zero");
+			AssetSuite::HuffmanResult result = tree.GetSymbol(outputSymbol, 2, 0);
+			Assert::AreEqual(AssetSuite::HuffmanResult::SymbolNotUsed == result, true, L"Symbol was found, even though we asked for code length zero");
 		}
 
 		TEST_METHOD(SymbolNotUsed)
@@ -237,8 +237,8 @@ namespace ZlibDecodeUnitTests
 			HuffmanTree tree;
 			tree.BuildFromLengths(symbols, lengths);
 			symbol_t outputSymbol;
-			AssetSuite::Result result = tree.GetSymbol(outputSymbol, 0, 0);
-			Assert::AreEqual(AssetSuite::Result::SymbolNotUsed == result, true);
+			AssetSuite::HuffmanResult result = tree.GetSymbol(outputSymbol, 0, 0);
+			Assert::AreEqual(AssetSuite::HuffmanResult::SymbolNotUsed == result, true);
 		}
 	};
 }

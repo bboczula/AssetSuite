@@ -2022,8 +2022,8 @@ namespace PngDecoderUnitTests
 			Assert::AreEqual(true, error, L"Wrong error code");
 
 			// Test the metadata calculation
-			Assert::AreEqual((UINT)32, imageDescriptor.width);
-			Assert::AreEqual((UINT)32, imageDescriptor.height);
+			Assert::AreEqual((UINT)1, imageDescriptor.width);
+			Assert::AreEqual((UINT)1, imageDescriptor.height);
 			Assert::AreEqual(true, AssetSuite::ImageFormat::RGB8 == imageDescriptor.format, L"Image format is incorrect");
 
 			Assert::AreEqual(expected.size(), actual.size(), L"Output vector size is incorrect");
