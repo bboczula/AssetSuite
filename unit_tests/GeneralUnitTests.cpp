@@ -6,6 +6,60 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
 namespace GeneralUnitTests
 {
+	TEST_CLASS(PublicApiTests)
+	{
+	public:
+		TEST_METHOD(GetVersionReturnsSdkVersion)
+		{
+			AssetSuite::Version version = {};
+
+			auto result = AssetSuite::GetVersion(&version);
+
+			Assert::AreEqual(true, AssetSuite::Result::Success == result);
+			Assert::AreEqual(static_cast<uint16_t>(2), version.major);
+			Assert::AreEqual(static_cast<uint16_t>(0), version.minor);
+			Assert::AreEqual(static_cast<uint16_t>(0), version.patch);
+			Assert::AreEqual(static_cast<uint16_t>(0), version.reserved);
+		}
+
+		TEST_METHOD(GetVersionReturnsInvalidArgumentForNullOutput)
+		{
+			auto result = AssetSuite::GetVersion(nullptr);
+
+			Assert::AreEqual(true, AssetSuite::Result::ErrorInvalidArgument == result);
+		}
+
+		TEST_METHOD(GetResultStringReturnsStableStringsForPublicResults)
+		{
+			AssertResultString(AssetSuite::Result::Success, "Success");
+			AssertResultString(AssetSuite::Result::WarningUnsupportedChunk, "Warning: unsupported chunk");
+			AssertResultString(AssetSuite::Result::ErrorInvalidArgument, "Error: invalid argument");
+			AssertResultString(AssetSuite::Result::ErrorUnsupportedFormat, "Error: unsupported format");
+			AssertResultString(AssetSuite::Result::ErrorFileNotFound, "Error: file not found");
+			AssertResultString(AssetSuite::Result::ErrorDecodeFailed, "Error: decode failed");
+			AssertResultString(AssetSuite::Result::ErrorOutputBufferTooSmall, "Error: output buffer too small");
+			AssertResultString(AssetSuite::Result::ErrorOutOfMemory, "Error: out of memory");
+			AssertResultString(AssetSuite::Result::ErrorInvalidContext, "Error: invalid context");
+			AssertResultString(AssetSuite::Result::ErrorUnknown, "Error: unknown");
+		}
+
+		TEST_METHOD(GetResultStringReturnsFallbackForUnknownResult)
+		{
+			const auto unknownResult = static_cast<AssetSuite::Result>(1234);
+
+			Assert::AreEqual("Unknown result", AssetSuite::GetResultString(unknownResult));
+		}
+
+	private:
+		static void AssertResultString(AssetSuite::Result result, const char* expected)
+		{
+			const char* actual = AssetSuite::GetResultString(result);
+
+			Assert::IsNotNull(actual);
+			Assert::AreEqual(expected, actual);
+		}
+	};
+
 	TEST_CLASS(FileExtensionsTests)
 	{
 	public:
