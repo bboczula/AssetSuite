@@ -126,6 +126,23 @@ AssetSuite::Result AssetSuite::DestroyContext(ContextHandle* context)
 	return Result::Success;
 }
 
+AssetSuite::Result AssetSuite::SetLoggingCallback(
+	ContextHandle context,
+	LoggingCallback callback,
+	LogLevel minLevel,
+	void* userData)
+{
+	if (!context)
+	{
+		return Result::ErrorInvalidContext;
+	}
+
+	context->loggingCallback = callback;
+	context->minimumLogLevel = minLevel;
+	context->loggingUserData = userData;
+	return Result::Success;
+}
+
 AssetSuite::Manager::Manager() : modelLoader(nullptr), imageInfo(), meshInfo()
 {
 	modelLoader = new ModelLoader;
