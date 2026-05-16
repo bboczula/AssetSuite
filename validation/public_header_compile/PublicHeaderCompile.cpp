@@ -2,10 +2,55 @@
 #include <cstdint>
 #include <type_traits>
 
+// Public SDK headers must not expose legacy, platform, or STL-owning API types.
+// Poisoning the tokens before inclusion turns accidental public leakage into a
+// compile failure for this external-consumer validation target.
+#define BYTE ASSETSUITE_FORBIDDEN_PUBLIC_SYMBOL(BYTE)
+#define FLOAT ASSETSUITE_FORBIDDEN_PUBLIC_SYMBOL(FLOAT)
+#define UINT ASSETSUITE_FORBIDDEN_PUBLIC_SYMBOL(UINT)
+#define vector ASSETSUITE_FORBIDDEN_PUBLIC_SYMBOL(vector)
+#define basic_string ASSETSUITE_FORBIDDEN_PUBLIC_SYMBOL(basic_string)
+#define string ASSETSUITE_FORBIDDEN_PUBLIC_SYMBOL(string)
+#define wstring ASSETSUITE_FORBIDDEN_PUBLIC_SYMBOL(wstring)
+#define u8string ASSETSUITE_FORBIDDEN_PUBLIC_SYMBOL(u8string)
+#define u16string ASSETSUITE_FORBIDDEN_PUBLIC_SYMBOL(u16string)
+#define u32string ASSETSUITE_FORBIDDEN_PUBLIC_SYMBOL(u32string)
+#define filesystem ASSETSUITE_FORBIDDEN_PUBLIC_SYMBOL(filesystem)
+#define path ASSETSUITE_FORBIDDEN_PUBLIC_SYMBOL(path)
+#define Manager ASSETSUITE_FORBIDDEN_PUBLIC_SYMBOL(Manager)
+#define Decoder ASSETSUITE_FORBIDDEN_PUBLIC_SYMBOL(Decoder)
+#define ImageDecoder ASSETSUITE_FORBIDDEN_PUBLIC_SYMBOL(ImageDecoder)
+#define MeshDecoder ASSETSUITE_FORBIDDEN_PUBLIC_SYMBOL(MeshDecoder)
+#define ImageDecoders ASSETSUITE_FORBIDDEN_PUBLIC_SYMBOL(ImageDecoders)
+#define MeshDecoders ASSETSUITE_FORBIDDEN_PUBLIC_SYMBOL(MeshDecoders)
+
 #include <AssetSuite/AssetSuite.h>
 #include <AssetSuite/AssetSuiteDescriptors.h>
 #include <AssetSuite/AssetSuiteHandles.h>
 #include <AssetSuite/AssetSuiteTypes.h>
+
+#if defined(_WINDOWS_) || defined(_INC_WINDOWS) || defined(WINAPI)
+#error Public AssetSuite SDK headers must not include Windows.h.
+#endif
+
+#undef BYTE
+#undef FLOAT
+#undef UINT
+#undef vector
+#undef basic_string
+#undef string
+#undef wstring
+#undef u8string
+#undef u16string
+#undef u32string
+#undef filesystem
+#undef path
+#undef Manager
+#undef Decoder
+#undef ImageDecoder
+#undef MeshDecoder
+#undef ImageDecoders
+#undef MeshDecoders
 
 static_assert(std::is_same_v<std::underlying_type_t<AssetSuite::Result>, int32_t>);
 static_assert(std::is_same_v<std::underlying_type_t<AssetSuite::PixelFormat>, uint32_t>);
