@@ -1,6 +1,7 @@
 #pragma warning (disable : 4251)
 #include <CppUnitTest.h>
 #include "../source/common/AssetSuite.h"
+#include "../source/common/AssetSuiteContext.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
@@ -158,7 +159,131 @@ namespace GeneralUnitTests
 			Assert::IsNull(context);
 		}
 
+		TEST_METHOD(SetLoggingCallbackRejectsNullContext)
+		{
+			LogCapture capture = {};
+
+			const auto result = AssetSuite::SetLoggingCallback(
+				nullptr,
+				&CaptureLogEvent,
+				AssetSuite::LogLevel::Info,
+				&capture);
+
+			Assert::AreEqual(true, AssetSuite::Result::ErrorInvalidContext == result);
+		}
+
+		TEST_METHOD(SetLoggingCallbackRegistersCallbackAndPassesUserData)
+		{
+			AssetSuite::ContextHandle context = nullptr;
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+			LogCapture capture = {};
+
+			const auto result = AssetSuite::SetLoggingCallback(
+				context,
+				&CaptureLogEvent,
+				AssetSuite::LogLevel::Info,
+				&capture);
+
+			Assert::AreEqual(true, AssetSuite::Result::Success == result);
+
+			AssetSuite::DispatchLogEvent(context, AssetSuite::LogLevel::Warning, "registered");
+
+			Assert::AreEqual(1, capture.callCount);
+			Assert::AreEqual(true, AssetSuite::LogLevel::Warning == capture.lastLevel);
+			Assert::AreEqual("registered", capture.lastMessage);
+			Assert::IsTrue(&capture == capture.lastUserData);
+
+			DestroyContextForCleanup(context);
+		}
+
+		TEST_METHOD(SetLoggingCallbackAppliesMinimumLogLevelFiltering)
+		{
+			AssetSuite::ContextHandle context = nullptr;
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+			LogCapture capture = {};
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::SetLoggingCallback(
+				context,
+				&CaptureLogEvent,
+				AssetSuite::LogLevel::Warning,
+				&capture));
+
+			AssetSuite::DispatchLogEvent(context, AssetSuite::LogLevel::Info, "filtered");
+			AssetSuite::DispatchLogEvent(context, AssetSuite::LogLevel::Warning, "warning");
+			AssetSuite::DispatchLogEvent(context, AssetSuite::LogLevel::Error, "error");
+
+			Assert::AreEqual(2, capture.callCount);
+			Assert::AreEqual(true, AssetSuite::LogLevel::Error == capture.lastLevel);
+			Assert::AreEqual("error", capture.lastMessage);
+
+			DestroyContextForCleanup(context);
+		}
+
+		TEST_METHOD(SetLoggingCallbackReplacesCallbackState)
+		{
+			AssetSuite::ContextHandle context = nullptr;
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+			LogCapture firstCapture = {};
+			LogCapture secondCapture = {};
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::SetLoggingCallback(
+				context,
+				&CaptureLogEvent,
+				AssetSuite::LogLevel::Info,
+				&firstCapture));
+
+			const auto result = AssetSuite::SetLoggingCallback(
+				context,
+				&CaptureLogEvent,
+				AssetSuite::LogLevel::Error,
+				&secondCapture);
+
+			Assert::AreEqual(true, AssetSuite::Result::Success == result);
+
+			AssetSuite::DispatchLogEvent(context, AssetSuite::LogLevel::Warning, "filtered");
+			AssetSuite::DispatchLogEvent(context, AssetSuite::LogLevel::Error, "replacement");
+
+			Assert::AreEqual(0, firstCapture.callCount);
+			Assert::AreEqual(1, secondCapture.callCount);
+			Assert::AreEqual("replacement", secondCapture.lastMessage);
+			Assert::IsTrue(&secondCapture == secondCapture.lastUserData);
+
+			DestroyContextForCleanup(context);
+		}
+
+		TEST_METHOD(SetLoggingCallbackUnregistersNullCallback)
+		{
+			AssetSuite::ContextHandle context = nullptr;
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+			LogCapture capture = {};
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::SetLoggingCallback(
+				context,
+				&CaptureLogEvent,
+				AssetSuite::LogLevel::Trace,
+				&capture));
+
+			const auto result = AssetSuite::SetLoggingCallback(
+				context,
+				nullptr,
+				AssetSuite::LogLevel::Trace,
+				nullptr);
+
+			Assert::AreEqual(true, AssetSuite::Result::Success == result);
+
+			AssetSuite::DispatchLogEvent(context, AssetSuite::LogLevel::Fatal, "unregistered");
+
+			Assert::AreEqual(0, capture.callCount);
+
+			DestroyContextForCleanup(context);
+		}
+
 	private:
+		struct LogCapture
+		{
+			int callCount;
+			AssetSuite::LogLevel lastLevel;
+			const char* lastMessage;
+			void* lastUserData;
+		};
+
 		static void AssertResultString(AssetSuite::Result result, const char* expected)
 		{
 			const char* actual = AssetSuite::GetResultString(result);
@@ -171,6 +296,15 @@ namespace GeneralUnitTests
 		{
 			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::DestroyContext(&context));
 			Assert::IsNull(context);
+		}
+
+		static void CaptureLogEvent(AssetSuite::LogLevel level, const char* message, void* userData)
+		{
+			auto* capture = static_cast<LogCapture*>(userData);
+			++capture->callCount;
+			capture->lastLevel = level;
+			capture->lastMessage = message;
+			capture->lastUserData = userData;
 		}
 	};
 

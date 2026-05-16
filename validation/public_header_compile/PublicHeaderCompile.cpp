@@ -102,6 +102,10 @@ static_assert(std::is_same_v<
 		AssetSuite::LogLevel,
 		void*)>);
 
+void PublicLoggingCallback(AssetSuite::LogLevel, const char*, void*)
+{
+}
+
 int main()
 {
 	AssetSuite::ContextHandle context = nullptr;
@@ -117,6 +121,16 @@ int main()
 	const AssetSuite::Result createDefaultResult = AssetSuite::CreateContext(nullptr, &context);
 	const AssetSuite::Result destroyDefaultResult = AssetSuite::DestroyContext(&context);
 	const AssetSuite::Result createExplicitResult = AssetSuite::CreateContext(&contextDesc, &context);
+	const AssetSuite::Result setLoggingResult = AssetSuite::SetLoggingCallback(
+		context,
+		&PublicLoggingCallback,
+		AssetSuite::LogLevel::Warning,
+		&contextDesc);
+	const AssetSuite::Result unregisterLoggingResult = AssetSuite::SetLoggingCallback(
+		context,
+		nullptr,
+		AssetSuite::LogLevel::Trace,
+		nullptr);
 	const AssetSuite::Result destroyExplicitResult = AssetSuite::DestroyContext(&context);
 
 	return context || blob || image || mesh ||
@@ -127,5 +141,7 @@ int main()
 		createDefaultResult == AssetSuite::Result::ErrorUnknown ||
 		destroyDefaultResult == AssetSuite::Result::ErrorUnknown ||
 		createExplicitResult == AssetSuite::Result::ErrorUnknown ||
+		setLoggingResult == AssetSuite::Result::ErrorUnknown ||
+		unregisterLoggingResult == AssetSuite::Result::ErrorUnknown ||
 		destroyExplicitResult == AssetSuite::Result::ErrorUnknown;
 }
