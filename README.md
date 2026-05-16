@@ -44,6 +44,26 @@ can set it to `nullptr` after successful destruction. Calling
 handle, including a repeated destroy through the same handle variable, returns
 `AssetSuite::Result::ErrorInvalidContext` instead of causing undefined behavior.
 
+## Logging Callback Contract
+
+Logging is configured per `AssetSuite::ContextHandle` with
+`AssetSuite::SetLoggingCallback`. A successful call replaces the context's
+previous callback pointer, minimum enabled `AssetSuite::LogLevel`, and opaque
+`userData` pointer together. Passing `nullptr` for the callback unregisters
+logging for that context and discards the previous callback state.
+
+`AssetSuite::LogLevel` values are ordered from least to most severe:
+`Trace`, `Debug`, `Info`, `Warning`, `Error`, and `Fatal`. The configured
+minimum level is inclusive: events below it are suppressed, while events equal
+to or above it are delivered when a callback is registered.
+
+The callback receives a null-terminated UTF-8 message pointer and the exact
+`userData` pointer supplied during registration. The SDK does not take ownership
+of `userData`, does not interpret it, and does not manage its lifetime. The
+message pointer is valid only for the duration of the callback invocation.
+Callback invocation follows the same external synchronization expectations as
+other operations on the context.
+
 ## Usage
 
 The current 2.0 public SDK headers expose the stable type, version, and context

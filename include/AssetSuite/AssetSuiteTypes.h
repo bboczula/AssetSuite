@@ -55,6 +55,8 @@ namespace AssetSuite
 		Index = 1u << 4
 	};
 
+	// Logging severity values are ordered from least to most severe. A minimum
+	// enabled level suppresses events with numerically lower values.
 	enum class LogLevel : uint32_t
 	{
 		Trace = 0,
@@ -65,6 +67,9 @@ namespace AssetSuite
 		Fatal = 5
 	};
 
+	// The message pointer is null-terminated UTF-8 and is valid only for the
+	// duration of the callback invocation. userData is the opaque pointer
+	// supplied to SetLoggingCallback.
 	typedef void (*LoggingCallback)(LogLevel level, const char* message, void* userData);
 
 	ASSET_SUITE_API Result GetVersion(Version* outVersion);

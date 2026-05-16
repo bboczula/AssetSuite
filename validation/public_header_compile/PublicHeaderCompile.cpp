@@ -57,6 +57,12 @@ static_assert(std::is_same_v<std::underlying_type_t<AssetSuite::PixelFormat>, ui
 static_assert(std::is_same_v<std::underlying_type_t<AssetSuite::AssetFormat>, uint32_t>);
 static_assert(std::is_same_v<std::underlying_type_t<AssetSuite::MeshAttributeFlags>, uint32_t>);
 static_assert(std::is_same_v<std::underlying_type_t<AssetSuite::LogLevel>, uint32_t>);
+static_assert(static_cast<uint32_t>(AssetSuite::LogLevel::Trace) == 0);
+static_assert(static_cast<uint32_t>(AssetSuite::LogLevel::Debug) == 1);
+static_assert(static_cast<uint32_t>(AssetSuite::LogLevel::Info) == 2);
+static_assert(static_cast<uint32_t>(AssetSuite::LogLevel::Warning) == 3);
+static_assert(static_cast<uint32_t>(AssetSuite::LogLevel::Error) == 4);
+static_assert(static_cast<uint32_t>(AssetSuite::LogLevel::Fatal) == 5);
 
 static_assert(std::is_same_v<
 	AssetSuite::LoggingCallback,
