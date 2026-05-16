@@ -77,6 +77,13 @@ static_assert(offsetof(AssetSuite::BlobDesc, structSize) == 0);
 static_assert(offsetof(AssetSuite::ImageDesc, structSize) == 0);
 static_assert(offsetof(AssetSuite::MeshDesc, structSize) == 0);
 
+static_assert(std::is_same_v<
+	decltype(&AssetSuite::CreateContext),
+	AssetSuite::Result (*)(const AssetSuite::ContextDesc*, AssetSuite::ContextHandle*)>);
+static_assert(std::is_same_v<
+	decltype(&AssetSuite::DestroyContext),
+	AssetSuite::Result (*)(AssetSuite::ContextHandle*)>);
+
 int main()
 {
 	AssetSuite::ContextHandle context = nullptr;
@@ -89,9 +96,18 @@ int main()
 	AssetSuite::ImageDesc imageDesc = { sizeof(AssetSuite::ImageDesc), 0, 0, AssetSuite::PixelFormat::Unknown, 0, 0 };
 	AssetSuite::MeshDesc meshDesc = { sizeof(AssetSuite::MeshDesc), 0, 0, 0, 0 };
 
+	const AssetSuite::Result createDefaultResult = AssetSuite::CreateContext(nullptr, &context);
+	const AssetSuite::Result destroyDefaultResult = AssetSuite::DestroyContext(&context);
+	const AssetSuite::Result createExplicitResult = AssetSuite::CreateContext(&contextDesc, &context);
+	const AssetSuite::Result destroyExplicitResult = AssetSuite::DestroyContext(&context);
+
 	return context || blob || image || mesh ||
 		contextDesc.structSize == 0 ||
 		blobDesc.structSize == 0 ||
 		imageDesc.structSize == 0 ||
-		meshDesc.structSize == 0;
+		meshDesc.structSize == 0 ||
+		createDefaultResult == AssetSuite::Result::ErrorUnknown ||
+		destroyDefaultResult == AssetSuite::Result::ErrorUnknown ||
+		createExplicitResult == AssetSuite::Result::ErrorUnknown ||
+		destroyExplicitResult == AssetSuite::Result::ErrorUnknown;
 }
