@@ -1,6 +1,7 @@
 #pragma warning (disable : 4251)
 
 #include "AssetSuite.h"
+#include "AssetSuiteContext.h"
 
 #include "../wavefront/ModelLoader.h"
 #include "../bmp/BmpDecoder.h"
@@ -8,9 +9,34 @@
 #include "../ppm/PpmEncoder.h"
 #include "../bypass/BypassEncoder.h"
 
+#include <new>
+
 namespace
 {
 	constexpr AssetSuite::Version ASSET_SUITE_VERSION = { 2, 0, 0, 0 };
+	constexpr AssetSuite::ContextDesc DEFAULT_CONTEXT_DESC = { sizeof(AssetSuite::ContextDesc), 0 };
+
+	AssetSuite::Result NormalizeContextDesc(const AssetSuite::ContextDesc* desc, AssetSuite::ContextDesc& normalizedDesc)
+	{
+		if (!desc)
+		{
+			normalizedDesc = DEFAULT_CONTEXT_DESC;
+			return AssetSuite::Result::Success;
+		}
+
+		if (desc->structSize != sizeof(AssetSuite::ContextDesc))
+		{
+			return AssetSuite::Result::ErrorInvalidArgument;
+		}
+
+		if (desc->flags != 0)
+		{
+			return AssetSuite::Result::ErrorInvalidArgument;
+		}
+
+		normalizedDesc = *desc;
+		return AssetSuite::Result::Success;
+	}
 }
 
 AssetSuite::Result AssetSuite::GetVersion(Version* outVersion)
@@ -51,6 +77,53 @@ const char* AssetSuite::GetResultString(Result result)
 	default:
 		return "Unknown result";
 	}
+}
+
+AssetSuite::Result AssetSuite::CreateContext(const ContextDesc* desc, ContextHandle* outContext)
+{
+	if (!outContext)
+	{
+		return Result::ErrorInvalidArgument;
+	}
+
+	if (*outContext)
+	{
+		return Result::ErrorInvalidArgument;
+	}
+
+	ContextDesc normalizedDesc = DEFAULT_CONTEXT_DESC;
+	const Result validationResult = NormalizeContextDesc(desc, normalizedDesc);
+	if (validationResult != Result::Success)
+	{
+		return validationResult;
+	}
+
+	try
+	{
+		*outContext = new AssetSuiteContext_t(normalizedDesc);
+	}
+	catch (const std::bad_alloc&)
+	{
+		return Result::ErrorOutOfMemory;
+	}
+	catch (...)
+	{
+		return Result::ErrorUnknown;
+	}
+
+	return Result::Success;
+}
+
+AssetSuite::Result AssetSuite::DestroyContext(ContextHandle* context)
+{
+	if (!context || !*context)
+	{
+		return Result::ErrorInvalidContext;
+	}
+
+	delete *context;
+	*context = nullptr;
+	return Result::Success;
 }
 
 AssetSuite::Manager::Manager() : modelLoader(nullptr), imageInfo(), meshInfo()

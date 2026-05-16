@@ -22,9 +22,32 @@ The public headers are provided under `include/AssetSuite` and are installed und
 
 Public headers do not require `Windows.h`, STL containers, filesystem path types, or internal implementation classes.
 
+## Context Lifecycle Contract
+
+The 2.0 runtime is entered through an opaque `AssetSuite::ContextHandle`.
+Context ownership belongs to the caller after successful creation and must be
+released with `AssetSuite::DestroyContext`.
+
+`AssetSuite::CreateContext(nullptr, &context)` is valid and creates a context
+with default settings. A non-null `AssetSuite::ContextDesc` must use
+`structSize == sizeof(AssetSuite::ContextDesc)` and `flags == 0`. Smaller,
+larger, or otherwise mismatched descriptor sizes are rejected with
+`AssetSuite::Result::ErrorInvalidArgument` for now. Unknown context flag bits are
+also rejected with `AssetSuite::Result::ErrorInvalidArgument`.
+The output handle passed to `AssetSuite::CreateContext` must point to a null
+handle; passing a pointer to an already-owned context returns
+`AssetSuite::Result::ErrorInvalidArgument` and leaves that handle unchanged.
+
+`AssetSuite::DestroyContext` takes a pointer to the caller's handle so the SDK
+can set it to `nullptr` after successful destruction. Calling
+`AssetSuite::DestroyContext(nullptr)` or passing a pointer to a null context
+handle, including a repeated destroy through the same handle variable, returns
+`AssetSuite::Result::ErrorInvalidContext` instead of causing undefined behavior.
+
 ## Usage
 
-The current 2.0 public SDK headers expose the stable type and version contract used by external consumers:
+The current 2.0 public SDK headers expose the stable type, version, and context
+lifecycle contract used by external consumers:
 
 ```cpp
 #include <AssetSuite/AssetSuite.h>
@@ -48,6 +71,20 @@ int main()
 	AssetSuite::MeshHandle mesh = nullptr;
 
 	AssetSuite::ContextDesc contextDesc = { sizeof(AssetSuite::ContextDesc), 0 };
+	result = AssetSuite::CreateContext(&contextDesc, &context);
+	if (result != AssetSuite::Result::Success)
+	{
+		const char* message = AssetSuite::GetResultString(result);
+		return message != nullptr ? 3 : 4;
+	}
+
+	result = AssetSuite::DestroyContext(&context);
+	if (result != AssetSuite::Result::Success)
+	{
+		const char* message = AssetSuite::GetResultString(result);
+		return message != nullptr ? 5 : 6;
+	}
+
 	AssetSuite::BlobDesc blobDesc = {
 		sizeof(AssetSuite::BlobDesc),
 		0,

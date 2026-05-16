@@ -8,7 +8,9 @@ namespace AssetSuite
 {
 	struct ContextDesc
 	{
+		// Must be exactly sizeof(ContextDesc) when a descriptor is supplied.
 		uint32_t structSize;
+		// Reserved for future use. Must be zero.
 		uint32_t flags;
 	};
 
