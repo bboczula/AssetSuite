@@ -102,32 +102,12 @@ AssetSuite::Result AssetSuite::CreateContext(const ContextDesc* desc, ContextHan
 		return validationResult;
 	}
 
-	try
-	{
-		*outContext = new AssetSuiteContext_t(normalizedDesc);
-	}
-	catch (const std::bad_alloc&)
-	{
-		return Result::ErrorOutOfMemory;
-	}
-	catch (...)
-	{
-		return Result::ErrorUnknown;
-	}
-
-	return Result::Success;
+	return Internal::CreateContextHandle(normalizedDesc, outContext);
 }
 
 AssetSuite::Result AssetSuite::DestroyContext(ContextHandle* context)
 {
-	if (!context || !*context)
-	{
-		return Result::ErrorInvalidContext;
-	}
-
-	delete *context;
-	*context = nullptr;
-	return Result::Success;
+	return Internal::DestroyContextHandle(context);
 }
 
 AssetSuite::Result AssetSuite::SetLoggingCallback(

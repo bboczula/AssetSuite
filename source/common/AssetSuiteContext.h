@@ -9,6 +9,9 @@ namespace AssetSuite
 	namespace Internal
 	{
 		class RuntimeContext;
+
+		Result CreateContextHandle(const ContextDesc& desc, ContextHandle* outContext) noexcept;
+		Result DestroyContextHandle(ContextHandle* context) noexcept;
 	}
 
 	struct AssetSuiteContext_t
