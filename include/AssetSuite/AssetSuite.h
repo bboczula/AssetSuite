@@ -30,7 +30,8 @@ namespace AssetSuite
 	// null-terminated UTF-8 and remains valid only for the duration of the
 	// callback invocation. userData is stored without interpretation and passed
 	// back unchanged. Callback invocation follows the context's external
-	// synchronization requirements.
+	// synchronization requirements. Passing a null or otherwise invalid context
+	// returns Result::ErrorInvalidContext.
 	ASSET_SUITE_API Result SetLoggingCallback(
 		ContextHandle context,
 		LoggingCallback callback,

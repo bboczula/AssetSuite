@@ -16,6 +16,7 @@ The public headers are provided under `include/AssetSuite` and are installed und
 
 - `AssetSuite::Result` and `AssetSuite::Version`
 - `AssetSuite::GetVersion` and `AssetSuite::GetResultString`
+- `AssetSuite::LogLevel`, `AssetSuite::LoggingCallback`, and `AssetSuite::SetLoggingCallback`
 - opaque handle types such as `AssetSuite::ContextHandle`, `AssetSuite::BlobHandle`, `AssetSuite::ImageHandle`, and `AssetSuite::MeshHandle`
 - plain descriptor structs such as `AssetSuite::ContextDesc`, `AssetSuite::BlobDesc`, `AssetSuite::ImageDesc`, and `AssetSuite::MeshDesc`
 - SDK enums such as `AssetSuite::AssetFormat`, `AssetSuite::PixelFormat`, and `AssetSuite::MeshAttributeFlags`
@@ -74,6 +75,20 @@ lifecycle contract used by external consumers:
 
 #include <cstdint>
 
+struct AppLogger
+{
+	int messagesSeen;
+};
+
+void OnAssetSuiteLog(AssetSuite::LogLevel level, const char* message, void* userData)
+{
+	AppLogger* logger = static_cast<AppLogger*>(userData);
+	++logger->messagesSeen;
+
+	(void)level;
+	(void)message;
+}
+
 int main()
 {
 	AssetSuite::Version version = {};
@@ -98,11 +113,34 @@ int main()
 		return message != nullptr ? 3 : 4;
 	}
 
-	result = AssetSuite::DestroyContext(&context);
+	AppLogger logger = {};
+	result = AssetSuite::SetLoggingCallback(
+		context,
+		&OnAssetSuiteLog,
+		AssetSuite::LogLevel::Warning,
+		&logger);
 	if (result != AssetSuite::Result::Success)
 	{
 		const char* message = AssetSuite::GetResultString(result);
 		return message != nullptr ? 5 : 6;
+	}
+
+	result = AssetSuite::SetLoggingCallback(
+		context,
+		nullptr,
+		AssetSuite::LogLevel::Trace,
+		nullptr);
+	if (result != AssetSuite::Result::Success)
+	{
+		const char* message = AssetSuite::GetResultString(result);
+		return message != nullptr ? 7 : 8;
+	}
+
+	result = AssetSuite::DestroyContext(&context);
+	if (result != AssetSuite::Result::Success)
+	{
+		const char* message = AssetSuite::GetResultString(result);
+		return message != nullptr ? 9 : 10;
 	}
 
 	AssetSuite::BlobDesc blobDesc = {
