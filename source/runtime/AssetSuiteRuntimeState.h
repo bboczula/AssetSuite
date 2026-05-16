@@ -62,8 +62,8 @@ namespace AssetSuite::Internal
 
 		struct CodecRegistry
 		{
-			void RegisterImageDecoder(ImageDecoders decoder, ImageDecoder& implementation) noexcept;
-			void RegisterMeshDecoder(MeshDecoders decoder, MeshDecoder& implementation) noexcept;
+			bool RegisterImageDecoder(ImageDecoders decoder, ImageDecoder& implementation) noexcept;
+			bool RegisterMeshDecoder(MeshDecoders decoder, MeshDecoder& implementation) noexcept;
 			ImageDecoder* FindImageDecoder(ImageDecoders decoder) const noexcept;
 			MeshDecoder* FindMeshDecoder(MeshDecoders decoder) const noexcept;
 			ImageDecoders ResolveImageDecoder(const std::filesystem::path& extension) const noexcept;
@@ -72,6 +72,23 @@ namespace AssetSuite::Internal
 		private:
 			std::array<ImageDecoder*, static_cast<size_t>(ImageDecoders::MaxDecoders)> imageDecoders = {};
 			std::array<MeshDecoder*, static_cast<size_t>(MeshDecoders::MaxDecoders)> meshDecoders = {};
+		};
+
+		struct CodecStorage
+		{
+			CodecStorage();
+			~CodecStorage();
+
+			CodecStorage(const CodecStorage&) = delete;
+			CodecStorage& operator=(const CodecStorage&) = delete;
+
+			std::unique_ptr<ModelLoader> modelLoader;
+			std::unique_ptr<BmpDecoder> bmpDecoder;
+			std::unique_ptr<PngDecoder> pngDecoder;
+			std::unique_ptr<PpmEncoder> ppmEncoder;
+			std::unique_ptr<BypassEncoder> bypassEncoder;
+
+			void RegisterWith(CodecRegistry& registry) noexcept;
 		};
 
 		struct FileInfo
@@ -105,11 +122,7 @@ namespace AssetSuite::Internal
 		std::vector<BYTE> rawBuffer;
 		std::vector<BYTE> decodedBuffer;
 		std::vector<BYTE> formattedBuffer;
-		std::unique_ptr<ModelLoader> modelLoader;
-		std::unique_ptr<BmpDecoder> bmpDecoder;
-		std::unique_ptr<PngDecoder> pngDecoder;
-		std::unique_ptr<PpmEncoder> ppmEncoder;
-		std::unique_ptr<BypassEncoder> bypassEncoder;
+		CodecStorage codecs;
 		AllocatorPolicy allocatorPolicy;
 		Diagnostics diagnostics;
 		FileLoader fileLoader;

@@ -10,19 +10,30 @@
 #include <new>
 
 AssetSuite::Internal::RuntimeState::RuntimeState()
+	: codecs()
+{
+	codecs.RegisterWith(codecRegistry);
+}
+
+AssetSuite::Internal::RuntimeState::~RuntimeState() = default;
+
+AssetSuite::Internal::RuntimeState::CodecStorage::CodecStorage()
 	: modelLoader(std::make_unique<ModelLoader>())
 	, bmpDecoder(std::make_unique<BmpDecoder>())
 	, pngDecoder(std::make_unique<PngDecoder>())
 	, ppmEncoder(std::make_unique<PpmEncoder>())
 	, bypassEncoder(std::make_unique<BypassEncoder>())
 {
-	codecRegistry.RegisterImageDecoder(ImageDecoders::BMP, *bmpDecoder);
-	codecRegistry.RegisterImageDecoder(ImageDecoders::PNG, *pngDecoder);
-
-	codecRegistry.RegisterMeshDecoder(MeshDecoders::WAVEFRONT, *modelLoader);
 }
 
-AssetSuite::Internal::RuntimeState::~RuntimeState() = default;
+AssetSuite::Internal::RuntimeState::CodecStorage::~CodecStorage() = default;
+
+void AssetSuite::Internal::RuntimeState::CodecStorage::RegisterWith(CodecRegistry& registry) noexcept
+{
+	registry.RegisterImageDecoder(ImageDecoders::BMP, *bmpDecoder);
+	registry.RegisterImageDecoder(ImageDecoders::PNG, *pngDecoder);
+	registry.RegisterMeshDecoder(MeshDecoders::WAVEFRONT, *modelLoader);
+}
 
 void* AssetSuite::Internal::RuntimeState::AllocatorPolicy::Allocate(size_t size, size_t alignment)
 {
@@ -104,29 +115,51 @@ AssetSuite::ErrorCode AssetSuite::Internal::RuntimeState::FileLoader::LoadToMemo
 	return ErrorCode::OK;
 }
 
-void AssetSuite::Internal::RuntimeState::CodecRegistry::RegisterImageDecoder(
+bool AssetSuite::Internal::RuntimeState::CodecRegistry::RegisterImageDecoder(
 	ImageDecoders decoder,
 	ImageDecoder& implementation) noexcept
 {
+	if (decoder == ImageDecoders::Auto || decoder == ImageDecoders::MaxDecoders)
+	{
+		return false;
+	}
+
 	imageDecoders[static_cast<size_t>(decoder)] = &implementation;
+	return true;
 }
 
-void AssetSuite::Internal::RuntimeState::CodecRegistry::RegisterMeshDecoder(
+bool AssetSuite::Internal::RuntimeState::CodecRegistry::RegisterMeshDecoder(
 	MeshDecoders decoder,
 	MeshDecoder& implementation) noexcept
 {
+	if (decoder == MeshDecoders::Auto || decoder == MeshDecoders::MaxDecoders)
+	{
+		return false;
+	}
+
 	meshDecoders[static_cast<size_t>(decoder)] = &implementation;
+	return true;
 }
 
 AssetSuite::ImageDecoder* AssetSuite::Internal::RuntimeState::CodecRegistry::FindImageDecoder(
 	ImageDecoders decoder) const noexcept
 {
+	if (decoder == ImageDecoders::Auto || decoder == ImageDecoders::MaxDecoders)
+	{
+		return nullptr;
+	}
+
 	return imageDecoders[static_cast<size_t>(decoder)];
 }
 
 AssetSuite::MeshDecoder* AssetSuite::Internal::RuntimeState::CodecRegistry::FindMeshDecoder(
 	MeshDecoders decoder) const noexcept
 {
+	if (decoder == MeshDecoders::Auto || decoder == MeshDecoders::MaxDecoders)
+	{
+		return nullptr;
+	}
+
 	return meshDecoders[static_cast<size_t>(decoder)];
 }
 

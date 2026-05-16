@@ -295,8 +295,9 @@ AssetSuite::ErrorCode AssetSuite::Manager::MeshGet(const char* meshName, MeshOut
 {
       auto& state = State();
       // Fetch the group data
-      auto groupOffset = state.modelLoader->GetGroupOffset(meshName);
-      auto groupSize = state.modelLoader->GetGroupSize(meshName);
+      auto& modelLoader = *state.codecs.modelLoader;
+      auto groupOffset = modelLoader.GetGroupOffset(meshName);
+      auto groupSize = modelLoader.GetGroupSize(meshName);
       state.meshInfo.numOfVertices = groupSize;
       state.meshInfo.numOfIndices = groupSize;
       descriptor.numOfVertices = state.meshInfo.numOfVertices;
@@ -308,10 +309,10 @@ AssetSuite::ErrorCode AssetSuite::Manager::MeshGet(const char* meshName, MeshOut
             output.resize(groupSize * 3 * 4);
             for (UINT i = 0; i < groupSize; i++)
             {
-                  auto face = state.modelLoader->GetFace(i + groupOffset);
+                  auto face = modelLoader.GetFace(i + groupOffset);
                   for (int j = 0; j < 3; j++)
                   {
-                        auto vertex = state.modelLoader->GetVertex(face.vertexIndex[j]);
+                        auto vertex = modelLoader.GetVertex(face.vertexIndex[j]);
                         output[i * 3 * 4 + j * 4 + 0] = vertex.x;
                         output[i * 3 * 4 + j * 4 + 1] = vertex.y;
                         output[i * 3 * 4 + j * 4 + 2] = vertex.z;
@@ -324,10 +325,10 @@ AssetSuite::ErrorCode AssetSuite::Manager::MeshGet(const char* meshName, MeshOut
             output.resize(groupSize * 3 * 4);
             for (UINT i = 0; i < groupSize; i++)
             {
-                  auto face = state.modelLoader->GetFace(i + groupOffset);
+                  auto face = modelLoader.GetFace(i + groupOffset);
                   for (int j = 0; j < 3; j++)
                   {
-                        auto normal = state.modelLoader->GetNormal(face.normalIndex[j]);
+                        auto normal = modelLoader.GetNormal(face.normalIndex[j]);
                         output[i * 3 * 4 + j * 4 + 0] = normal.x;
                         output[i * 3 * 4 + j * 4 + 1] = normal.y;
                         output[i * 3 * 4 + j * 4 + 2] = normal.z;
@@ -340,10 +341,10 @@ AssetSuite::ErrorCode AssetSuite::Manager::MeshGet(const char* meshName, MeshOut
             output.resize(groupSize * 3 * 4);
             for (UINT i = 0; i < groupSize; i++)
             {
-                  auto face = state.modelLoader->GetFace(i + groupOffset);
+                  auto face = modelLoader.GetFace(i + groupOffset);
                   for (int j = 0; j < 3; j++)
                   {
-                        auto tangent = state.modelLoader->GetTangent(face.normalIndex[j]);
+                        auto tangent = modelLoader.GetTangent(face.normalIndex[j]);
                         output[i * 3 * 4 + j * 4 + 0] = tangent.x;
                         output[i * 3 * 4 + j * 4 + 1] = tangent.y;
                         output[i * 3 * 4 + j * 4 + 2] = tangent.z;
@@ -356,10 +357,10 @@ AssetSuite::ErrorCode AssetSuite::Manager::MeshGet(const char* meshName, MeshOut
             output.resize(groupSize * 3 * 2);
             for (UINT i = 0; i < groupSize; i++)
             {
-                  auto face = state.modelLoader->GetFace(i + groupOffset);
+                  auto face = modelLoader.GetFace(i + groupOffset);
                   for (int j = 0; j < 3; j++)
                   {
-                        auto texCoord = state.modelLoader->GetTextureCoord(face.textureIndex[j]);
+                        auto texCoord = modelLoader.GetTextureCoord(face.textureIndex[j]);
                         output[i * 3 * 2 + j * 2 + 0] = texCoord.x;
                         output[i * 3 * 2 + j * 2 + 1] = texCoord.y;
                   }
@@ -386,7 +387,7 @@ AssetSuite::ErrorCode AssetSuite::Manager::DumpDecodedBuffer()
 void AssetSuite::Manager::StoreImageToFile(const std::string& filePathAndName, const std::vector<BYTE>& buffer, const ImageDescriptor& imageDescriptor)
 {
       auto& state = State();
-      state.rawBuffer = state.ppmEncoder->Encode(buffer, imageDescriptor);
+      state.rawBuffer = state.codecs.ppmEncoder->Encode(buffer, imageDescriptor);
       StoreMemoryToFile(state.rawBuffer, filePathAndName);
 }
 
@@ -420,6 +421,6 @@ void AssetSuite::Manager::DumpByteVectorToCpp(const std::vector<BYTE>& byteVecto
 
 void AssetSuite::Manager::DumpBuffer(const std::string& fileName, const std::vector<BYTE>& buffer, ImageDescriptor& descriptor)
 {
-      auto dumpBuffer = State().bypassEncoder->Encode(buffer, descriptor);
+      auto dumpBuffer = State().codecs.bypassEncoder->Encode(buffer, descriptor);
       StoreMemoryToFile(dumpBuffer, fileName);
 }
