@@ -4,6 +4,7 @@
 CREATE_LIB_DIRECTORY = "{MKDIR} %{cfg.targetdir}/../lib"
 CREATE_INC_DIRECTORY = "{MKDIR} %{cfg.targetdir}/../inc"
 CREATE_PUBLIC_INC_DIRECTORY = "{MKDIR} %{cfg.targetdir}/../inc/AssetSuite"
+CLEAN_INC_DIRECTORY = "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Remove-Item -LiteralPath '%{cfg.targetdir}/../inc' -Recurse -Force -ErrorAction SilentlyContinue\""
 COPY_RELEASE_LIB_FILE = "{COPY} %{cfg.targetdir}/assetsuite_r.lib %{cfg.targetdir}/../lib"
 COPY_DEBUG_LIB_FILE = "{COPY} %{cfg.targetdir}/assetsuite_d.lib %{cfg.targetdir}/../lib"
 COPY_PUBLIC_HEADER_FILES = "{COPY} %{cfg.targetdir}/../../../include/AssetSuite/*.h %{cfg.targetdir}/../inc/AssetSuite"
@@ -61,6 +62,7 @@ project "AssetSuite"
 	-- Copy some files over to have a full DLL release
 	postbuildcommands {
 		CREATE_LIB_DIRECTORY,
+		CLEAN_INC_DIRECTORY,
 		CREATE_INC_DIRECTORY,
 		CREATE_PUBLIC_INC_DIRECTORY,
 		COPY_PUBLIC_HEADER_FILES
