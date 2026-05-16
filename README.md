@@ -38,7 +38,8 @@ also rejected with `AssetSuite::Result::ErrorInvalidArgument`.
 `AssetSuite::DestroyContext` takes a pointer to the caller's handle so the SDK
 can set it to `nullptr` after successful destruction. Calling
 `AssetSuite::DestroyContext(nullptr)` or passing a pointer to a null context
-handle returns a defined error instead of causing undefined behavior.
+handle, including a repeated destroy through the same handle variable, returns
+`AssetSuite::Result::ErrorInvalidContext` instead of causing undefined behavior.
 
 ## Usage
 

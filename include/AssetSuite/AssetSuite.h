@@ -12,7 +12,7 @@ namespace AssetSuite
 	ASSET_SUITE_API Result CreateContext(const ContextDesc* desc, ContextHandle* outContext);
 
 	// Destroys a runtime context and sets the caller's handle to nullptr on
-	// success. Passing nullptr or a pointer to a null handle returns a defined
-	// error.
+	// success. Passing nullptr or a pointer to a null handle returns
+	// Result::ErrorInvalidContext.
 	ASSET_SUITE_API Result DestroyContext(ContextHandle* context);
 }
