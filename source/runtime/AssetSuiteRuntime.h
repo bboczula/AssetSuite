@@ -19,6 +19,12 @@ namespace AssetSuite::Internal
 		const ContextDesc& Descriptor() const noexcept;
 		Manager& LegacyManager() noexcept;
 		const Manager& LegacyManager() const noexcept;
+		RuntimeState::AllocatorPolicy& AllocatorPolicy() noexcept;
+		RuntimeState::Diagnostics& Diagnostics() noexcept;
+		const RuntimeState::Diagnostics& Diagnostics() const noexcept;
+		RuntimeState::FileLoader& FileLoader() noexcept;
+		RuntimeState::CodecRegistry& CodecRegistry() noexcept;
+		const RuntimeState::CodecRegistry& CodecRegistry() const noexcept;
 
 		void SetLoggingCallback(LoggingCallback callback, LogLevel minimumLevel, void* userData) noexcept;
 		void DispatchLogEvent(LogLevel level, const char* message) const;

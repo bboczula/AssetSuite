@@ -11,6 +11,8 @@
 #include "../ppm/PpmEncoder.h"
 #include "../bypass/BypassEncoder.h"
 
+#include <fstream>
+#include <iostream>
 #include <new>
 
 namespace
@@ -208,22 +210,23 @@ AssetSuite::ErrorCode AssetSuite::Manager::ImageDecode(ImageDecoders decoder)
 
       if (decoder == ImageDecoders::Auto)
       {
-            if (state.fileInfo.extension.compare(".bmp") == 0)
+            decoder = state.codecRegistry.ResolveImageDecoder(state.fileInfo.extension);
+            if (decoder == ImageDecoders::Auto)
             {
-                  decoder = ImageDecoders::BMP;
-            }
-            else if (state.fileInfo.extension.compare(".png") == 0)
-            {
-                  decoder = ImageDecoders::PNG;
-            }
-            else
-            {
+                  state.diagnostics.Add(ErrorCode::FileTypeNotSupported, "Image file type is not supported.");
                   return ErrorCode::FileTypeNotSupported;
             }
       }
 
+      ImageDecoder* imageDecoder = state.codecRegistry.FindImageDecoder(decoder);
+      if (!imageDecoder)
+      {
+            state.diagnostics.Add(ErrorCode::FileTypeNotSupported, "Image decoder is not registered.");
+            return ErrorCode::FileTypeNotSupported;
+      }
+
       ImageDescriptor descriptor;
-      auto error = state.imageDecoders[(size_t)decoder]->Decode(state.decodedBuffer, state.rawBuffer.data(), descriptor);
+      auto error = imageDecoder->Decode(state.decodedBuffer, state.rawBuffer.data(), descriptor);
 
       state.imageInfo.width = descriptor.width;
       state.imageInfo.height = descriptor.height;
@@ -287,19 +290,24 @@ AssetSuite::ErrorCode AssetSuite::Manager::MeshDecode(MeshDecoders decoder)
 
       if (decoder == MeshDecoders::Auto)
       {
-            if (state.fileInfo.extension.compare(".obj") == 0)
+            decoder = state.codecRegistry.ResolveMeshDecoder(state.fileInfo.extension);
+            if (decoder == MeshDecoders::Auto)
             {
-                  decoder = MeshDecoders::WAVEFRONT;
-            }
-            else
-            {
+                  state.diagnostics.Add(ErrorCode::FileTypeNotSupported, "Mesh file type is not supported.");
                   return ErrorCode::FileTypeNotSupported;
             }
       }
 
+      MeshDecoder* meshDecoder = state.codecRegistry.FindMeshDecoder(decoder);
+      if (!meshDecoder)
+      {
+            state.diagnostics.Add(ErrorCode::FileTypeNotSupported, "Mesh decoder is not registered.");
+            return ErrorCode::FileTypeNotSupported;
+      }
+
       std::vector<BYTE> output;
       MeshDescriptor descriptor;
-      auto error = state.meshDecoders[(size_t)decoder]->Decode(output, state.rawBuffer.data(), descriptor);
+      auto error = meshDecoder->Decode(output, state.rawBuffer.data(), descriptor);
       return error ? ErrorCode::OK : ErrorCode::Undefined;
 }
 
@@ -404,62 +412,14 @@ void AssetSuite::Manager::StoreImageToFile(const std::string& filePathAndName, c
 
 AssetSuite::ErrorCode AssetSuite::Manager::LoadFileToMemory(const std::string& fileName, bool isBinary)
 {
-      // Check if file exists
       auto& state = State();
-      if (!std::filesystem::exists(state.fileInfo.fullName))
+      const ErrorCode result = state.fileLoader.LoadToMemory(fileName, isBinary, state.rawBuffer);
+      if (result != ErrorCode::OK)
       {
-            return ErrorCode::NonExistingFile;
+            state.diagnostics.Add(result, "Failed to load file into runtime memory.");
       }
 
-      // Clear the buffer, since it might have something in it
-      state.rawBuffer.clear();
-
-      //load and decode
-      std::ifstream file(fileName.c_str(), std::ios::in | std::ios::ate | std::ios::binary);
-
-      // Figure out the file size
-      // - this type is an implementation-defined signed integral type used to represent the number of
-      //   characters transered in an I/O opration or the size of I/O buffer. It is usead as a ssinged counterpart of the std:size_T
-      std::streamsize size = 0;
-
-      // - seekg sets the position of the next character to be extracted from the input stream
-      // - it returns the istream object
-      // - first parameter is the offset value, relative to the second parameter
-      // - second parameter can take three values: beginning, current or end of the current stream
-      // - this seems to set the next character to read as the last character in the file
-      if (file.seekg(0, std::ios::end).good())
-      {
-            // tellg() returns the position of the currenct character in the input stream
-            // the return type is the streampos
-            // effectively this returns the position of the last character
-            size = file.tellg();
-      }
-
-      // this seems to set the next character to read as the first character
-      if (file.seekg(0, std::ios::beg).good())
-      {
-            // tellg() function returns the position of the first character
-            // you calculate the size of the file by substracting position of the last character from the first character
-            size -= file.tellg();
-      }
-
-      //read contents of the file into the vector
-      if (size > 0)
-      {
-            state.rawBuffer.resize((size_t)size);
-            file.read((char*)(&state.rawBuffer[0]), size);
-            if (!isBinary)
-            {
-                  // Needed for stringstream to work properly.
-                  state.rawBuffer.push_back('\0');
-            }
-      }
-      else
-      {
-            state.rawBuffer.clear();
-      }
-
-      return ErrorCode::OK;
+      return result;
 }
 
 void AssetSuite::Manager::StoreMemoryToFile(const std::vector<BYTE>& buffer, const std::string& fileName)

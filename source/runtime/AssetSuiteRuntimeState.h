@@ -1,8 +1,10 @@
 #pragma once
 
 #include <array>
+#include <cstddef>
 #include <filesystem>
 #include <memory>
+#include <string>
 #include <vector>
 #include <Windows.h>
 
@@ -24,6 +26,54 @@ namespace AssetSuite::Internal
 {
 	struct RuntimeState final
 	{
+		struct AllocatorPolicy
+		{
+			using AllocateCallback = void* (*)(size_t size, size_t alignment, void* userData);
+			using FreeCallback = void (*)(void* memory, void* userData);
+
+			AllocateCallback allocate = nullptr;
+			FreeCallback free = nullptr;
+			void* userData = nullptr;
+
+			void* Allocate(size_t size, size_t alignment);
+			void Free(void* memory) noexcept;
+		};
+
+		struct Diagnostics
+		{
+			struct Entry
+			{
+				ErrorCode code = ErrorCode::OK;
+				std::string message;
+			};
+
+			void Clear();
+			void Add(ErrorCode code, const char* message);
+			const std::vector<Entry>& Entries() const noexcept;
+
+		private:
+			std::vector<Entry> entries;
+		};
+
+		struct FileLoader
+		{
+			ErrorCode LoadToMemory(const std::filesystem::path& fileName, bool isBinary, std::vector<BYTE>& output) const;
+		};
+
+		struct CodecRegistry
+		{
+			void RegisterImageDecoder(ImageDecoders decoder, ImageDecoder& implementation) noexcept;
+			void RegisterMeshDecoder(MeshDecoders decoder, MeshDecoder& implementation) noexcept;
+			ImageDecoder* FindImageDecoder(ImageDecoders decoder) const noexcept;
+			MeshDecoder* FindMeshDecoder(MeshDecoders decoder) const noexcept;
+			ImageDecoders ResolveImageDecoder(const std::filesystem::path& extension) const noexcept;
+			MeshDecoders ResolveMeshDecoder(const std::filesystem::path& extension) const noexcept;
+
+		private:
+			std::array<ImageDecoder*, static_cast<size_t>(ImageDecoders::MaxDecoders)> imageDecoders = {};
+			std::array<MeshDecoder*, static_cast<size_t>(MeshDecoders::MaxDecoders)> meshDecoders = {};
+		};
+
 		struct FileInfo
 		{
 			std::filesystem::path fullName;
@@ -60,7 +110,9 @@ namespace AssetSuite::Internal
 		std::unique_ptr<PngDecoder> pngDecoder;
 		std::unique_ptr<PpmEncoder> ppmEncoder;
 		std::unique_ptr<BypassEncoder> bypassEncoder;
-		std::array<ImageDecoder*, static_cast<size_t>(ImageDecoders::MaxDecoders)> imageDecoders;
-		std::array<MeshDecoder*, static_cast<size_t>(MeshDecoders::MaxDecoders)> meshDecoders;
+		AllocatorPolicy allocatorPolicy;
+		Diagnostics diagnostics;
+		FileLoader fileLoader;
+		CodecRegistry codecRegistry;
 	};
 }

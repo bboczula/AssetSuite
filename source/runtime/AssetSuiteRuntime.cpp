@@ -25,6 +25,42 @@ const AssetSuite::Manager& AssetSuite::Internal::RuntimeContext::LegacyManager()
 	return manager;
 }
 
+AssetSuite::Internal::RuntimeState::AllocatorPolicy&
+AssetSuite::Internal::RuntimeContext::AllocatorPolicy() noexcept
+{
+	return state.allocatorPolicy;
+}
+
+AssetSuite::Internal::RuntimeState::Diagnostics&
+AssetSuite::Internal::RuntimeContext::Diagnostics() noexcept
+{
+	return state.diagnostics;
+}
+
+const AssetSuite::Internal::RuntimeState::Diagnostics&
+AssetSuite::Internal::RuntimeContext::Diagnostics() const noexcept
+{
+	return state.diagnostics;
+}
+
+AssetSuite::Internal::RuntimeState::FileLoader&
+AssetSuite::Internal::RuntimeContext::FileLoader() noexcept
+{
+	return state.fileLoader;
+}
+
+AssetSuite::Internal::RuntimeState::CodecRegistry&
+AssetSuite::Internal::RuntimeContext::CodecRegistry() noexcept
+{
+	return state.codecRegistry;
+}
+
+const AssetSuite::Internal::RuntimeState::CodecRegistry&
+AssetSuite::Internal::RuntimeContext::CodecRegistry() const noexcept
+{
+	return state.codecRegistry;
+}
+
 void AssetSuite::Internal::RuntimeContext::SetLoggingCallback(
 	LoggingCallback callback,
 	LogLevel minimumLevel,
