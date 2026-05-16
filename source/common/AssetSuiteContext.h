@@ -21,4 +21,6 @@ namespace AssetSuite
 		LogLevel minimumLogLevel;
 		void* loggingUserData;
 	};
+
+	void DispatchLogEvent(ContextHandle context, LogLevel level, const char* message);
 }
