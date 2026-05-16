@@ -2,7 +2,6 @@
 #include <cstdint>
 #include <type_traits>
 
-#include <AssetSuite.h>
 #include <AssetSuite/AssetSuite.h>
 #include <AssetSuite/AssetSuiteDescriptors.h>
 #include <AssetSuite/AssetSuiteHandles.h>

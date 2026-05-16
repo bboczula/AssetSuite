@@ -7,7 +7,6 @@ CREATE_PUBLIC_INC_DIRECTORY = "{MKDIR} %{cfg.targetdir}/../inc/AssetSuite"
 COPY_RELEASE_LIB_FILE = "{COPY} %{cfg.targetdir}/assetsuite_r.lib %{cfg.targetdir}/../lib"
 COPY_DEBUG_LIB_FILE = "{COPY} %{cfg.targetdir}/assetsuite_d.lib %{cfg.targetdir}/../lib"
 COPY_PUBLIC_HEADER_FILES = "{COPY} %{cfg.targetdir}/../../../include/AssetSuite/*.h %{cfg.targetdir}/../inc/AssetSuite"
-COPY_LEGACY_HEADER_FILES = "{COPY} %{cfg.targetdir}/../../../source/common/*.h %{cfg.targetdir}/../inc"
 LOCATION_DIRECTORY_NAME = "build"
 
 -- Global Functions
@@ -63,8 +62,7 @@ project "AssetSuite"
 		CREATE_LIB_DIRECTORY,
 		CREATE_INC_DIRECTORY,
 		CREATE_PUBLIC_INC_DIRECTORY,
-		COPY_PUBLIC_HEADER_FILES,
-		COPY_LEGACY_HEADER_FILES
+		COPY_PUBLIC_HEADER_FILES
 	}
     files {
 		"include/AssetSuite/**.h",
