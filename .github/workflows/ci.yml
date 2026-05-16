@@ -1,0 +1,117 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  windows-vs2022:
+    name: Windows VS2022
+    runs-on: windows-2022
+
+    env:
+      PREMAKE_VERSION: 5.0.0-beta7
+      BUILD_PLATFORM: x64
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Download Premake
+        shell: pwsh
+        run: |
+          $premakeVersion = $env:PREMAKE_VERSION
+          $premakeUrl = "https://github.com/premake/premake-core/releases/download/v$premakeVersion/premake-$premakeVersion-windows.zip"
+          New-Item -ItemType Directory -Force -Path tools/premake | Out-Null
+          Invoke-WebRequest -Uri $premakeUrl -OutFile tools/premake/premake.zip
+          Expand-Archive -Path tools/premake/premake.zip -DestinationPath tools/premake -Force
+
+      - name: Locate Visual Studio tools
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vsPath = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $vsPath) {
+            throw "Visual Studio with C++ tools was not found."
+          }
+
+          $msbuild = Join-Path $vsPath "MSBuild\Current\Bin\MSBuild.exe"
+          $vstest = Join-Path $vsPath "Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe"
+
+          if (-not (Test-Path $msbuild)) {
+            throw "MSBuild was not found at $msbuild."
+          }
+          if (-not (Test-Path $vstest)) {
+            throw "vstest.console.exe was not found at $vstest."
+          }
+
+          "MSBUILD_PATH=$msbuild" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "VSTEST_PATH=$vstest" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Generate Visual Studio solution
+        shell: pwsh
+        run: '& ./tools/premake/premake5.exe vs2022'
+
+      - name: Build Debug
+        shell: pwsh
+        run: |
+          $pathValue = [Environment]::GetEnvironmentVariable("Path", "Process")
+          if (-not $pathValue) {
+            $pathValue = [Environment]::GetEnvironmentVariable("PATH", "Process")
+          }
+          [Environment]::SetEnvironmentVariable("PATH", $null, "Process")
+          [Environment]::SetEnvironmentVariable("Path", $pathValue, "Process")
+
+          & $env:MSBUILD_PATH build/AssetSuite.sln /m /p:Configuration=Debug /p:Platform=$env:BUILD_PLATFORM
+
+      - name: Run Debug unit tests
+        shell: pwsh
+        run: '& $env:VSTEST_PATH bin/Debug/tests/UnitTest.dll'
+
+      - name: Run Debug public header validation
+        shell: pwsh
+        run: '& ./bin/Debug/validation/PublicHeaderCompile.exe'
+
+      - name: Build Release
+        shell: pwsh
+        run: |
+          $pathValue = [Environment]::GetEnvironmentVariable("Path", "Process")
+          if (-not $pathValue) {
+            $pathValue = [Environment]::GetEnvironmentVariable("PATH", "Process")
+          }
+          [Environment]::SetEnvironmentVariable("PATH", $null, "Process")
+          [Environment]::SetEnvironmentVariable("Path", $pathValue, "Process")
+
+          & $env:MSBUILD_PATH build/AssetSuite.sln /m /p:Configuration=Release /p:Platform=$env:BUILD_PLATFORM
+
+      - name: Run Release unit tests
+        shell: pwsh
+        run: '& $env:VSTEST_PATH bin/Release/tests/UnitTest.dll'
+
+      - name: Run Release public header validation
+        shell: pwsh
+        run: '& ./bin/Release/validation/PublicHeaderCompile.exe'
+
+      - name: Stage SDK artifact
+        shell: pwsh
+        run: |
+          $artifactRoot = "artifacts/AssetSuite-SDK"
+          New-Item -ItemType Directory -Force -Path "$artifactRoot/bin", "$artifactRoot/lib", "$artifactRoot/include" | Out-Null
+
+          Copy-Item -Path bin/Release/bin/assetsuite_r.dll -Destination "$artifactRoot/bin/"
+          Copy-Item -Path bin/Release/lib/assetsuite_r.lib -Destination "$artifactRoot/lib/"
+          Copy-Item -Path bin/Release/inc/AssetSuite -Destination "$artifactRoot/include/AssetSuite" -Recurse
+          Copy-Item -Path LICENSE, README.md -Destination "$artifactRoot/"
+
+          if (Test-Path bin/Release/bin/assetsuite_r.pdb) {
+            New-Item -ItemType Directory -Force -Path "$artifactRoot/symbols" | Out-Null
+            Copy-Item -Path bin/Release/bin/assetsuite_r.pdb -Destination "$artifactRoot/symbols/"
+          }
+
+      - name: Upload SDK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AssetSuite-SDK-${{ github.sha }}
+          path: artifacts/AssetSuite-SDK
+          if-no-files-found: error
+          retention-days: 30
