@@ -5,10 +5,14 @@
 
 #define DUMP_BUFFERS 0
 
+// Internal legacy demo for the pre-2.0 implementation API.
+// This intentionally uses source/common headers and must not be treated as the
+// public SDK integration example. External consumers should include
+// <AssetSuite/AssetSuite.h> from the installed SDK header root instead.
 void main()
 {
 	AssetSuite::Manager assetManager;
-	std::cout << "Hello, AssetSuite!" << std::endl;
+	std::cout << "Hello, AssetSuite legacy internal demo!" << std::endl;
 
 	AssetSuite::ImageDescriptor imageDescriptor = {};
 	auto errorCode = assetManager.ImageLoadAndDecode("girl_with_pearl_earring.bmp");

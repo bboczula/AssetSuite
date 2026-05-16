@@ -1,43 +1,95 @@
 # AssetSuite
-## Overview
-A simple and convinient library for loading game assets (like images and meshes) from disc to local memory.It's main design principle is that it has to be both convinient to use and easy to read and understand, and not necessarily extremly fast. You should use this library if you simply want to get your work done on your engine and don't care about the details, or if you are studying image formats like BMP or PNG.
 
-## Dependencies
-The library requires C++17 because it uses the `filesystem` header. It also requires C++20 because of the `span` usage.
+## Overview
+
+AssetSuite is a C++ asset loading SDK for image and mesh data. The 2.0 SDK surface is designed as a small public boundary for engine and tool integration: consumers include stable public headers, receive SDK result codes, and exchange plain descriptor structs and opaque handles instead of internal implementation classes.
+
+## Public SDK Surface
+
+External consumers should include the 2.0 public header from the installed include root:
+
+```cpp
+#include <AssetSuite/AssetSuite.h>
+```
+
+The public headers are provided under `include/AssetSuite` and are installed under `inc/AssetSuite`. They define:
+
+- `AssetSuite::Result` and `AssetSuite::Version`
+- `AssetSuite::GetVersion` and `AssetSuite::GetResultString`
+- opaque handle types such as `AssetSuite::ContextHandle`, `AssetSuite::BlobHandle`, `AssetSuite::ImageHandle`, and `AssetSuite::MeshHandle`
+- plain descriptor structs such as `AssetSuite::ContextDesc`, `AssetSuite::BlobDesc`, `AssetSuite::ImageDesc`, and `AssetSuite::MeshDesc`
+- SDK enums such as `AssetSuite::AssetFormat`, `AssetSuite::PixelFormat`, and `AssetSuite::MeshAttributeFlags`
+
+Public headers do not require `Windows.h`, STL containers, filesystem path types, or internal implementation classes.
 
 ## Usage
-First of all, you need to declare Asset Suite manager. Asset Suite manages its memory internally, so once this class goes out of scope, the memory will be cleared.
-```cpp
-AssetSuite::Manager assetManager;
-```
-Then you need to load and decode image or mesh from the disc, to the memory. By default, the appropriate decoder will be used based on the file extension, however, you can provide an option which decoder to use. You can either use two different functions or a convinent one that does both of those things.
-```cpp
-auto errorCode = assetManager.ImageLoadAndDecode("girl_with_pearl_earring.bmp");
-```
-Finally, you need to retrieve the image from memory. You can do that by using the `Get` function. You need to provide the output format of the image, as well as a vector of bytes where the output will be copied to. You will also get some information about the image in the `ImageDescriptor`, like image dimensions.
-```cpp
-AssetSuite::ImageDescriptor imageDescriptor = {};
-std::vector<BYTE> imageOutput;
-errorCode = assetManager.ImageGet(AssetSuite::OutputFormat::RGB8, imageOutput, imageDescriptor);
-```
-The procedure is very similar for meshes, but when you get one, you need to provide the name of the mesh as well, since usually you can have multiple meshes in one file.
-```cpp
-errorCode = assetManager.MeshLoadAndDecode("wavefront_sample.obj");
 
-std::vector<FLOAT> meshOutput;
-AssetSuite::MeshDescriptor meshDescriptor;
-errorCode = assetManager.MeshGet("Plane_Plane\r", AssetSuite::MeshOutputFormat::POSITION, meshOutput, meshDescriptor);
+The current 2.0 public SDK headers expose the stable type and version contract used by external consumers:
+
+```cpp
+#include <AssetSuite/AssetSuite.h>
+
+#include <cstdint>
+
+int main()
+{
+	AssetSuite::Version version = {};
+	AssetSuite::Result result = AssetSuite::GetVersion(&version);
+
+	if (result != AssetSuite::Result::Success)
+	{
+		const char* message = AssetSuite::GetResultString(result);
+		return message != nullptr ? 1 : 2;
+	}
+
+	AssetSuite::ContextHandle context = nullptr;
+	AssetSuite::BlobHandle blob = nullptr;
+	AssetSuite::ImageHandle image = nullptr;
+	AssetSuite::MeshHandle mesh = nullptr;
+
+	AssetSuite::ContextDesc contextDesc = { sizeof(AssetSuite::ContextDesc), 0 };
+	AssetSuite::BlobDesc blobDesc = {
+		sizeof(AssetSuite::BlobDesc),
+		0,
+		AssetSuite::AssetFormat::Unknown,
+		0
+	};
+	AssetSuite::ImageDesc imageDesc = {
+		sizeof(AssetSuite::ImageDesc),
+		0,
+		0,
+		AssetSuite::PixelFormat::Unknown,
+		0,
+		0
+	};
+	AssetSuite::MeshDesc meshDesc = {
+		sizeof(AssetSuite::MeshDesc),
+		0,
+		0,
+		0,
+		static_cast<uint32_t>(AssetSuite::MeshAttributeFlags::None)
+	};
+
+	return context || blob || image || mesh ||
+		contextDesc.structSize == 0 ||
+		blobDesc.structSize == 0 ||
+		imageDesc.structSize == 0 ||
+		meshDesc.structSize == 0;
+}
 ```
+
+Asset loading entry points will build on these handle and descriptor types as the 2.0 API is expanded.
 
 ## Integration
-This library provides two sets of DLLs and LIBs, one for Release and one for Debug configuration. This is important, since this library uses STL, and having one DLL would lead to errors. There is also a set of common headers that need to be included.
 
-## AssetSuite 2.0 SDK Headers
-The AssetSuite 2.0 public SDK surface is being introduced under `include/AssetSuite`.
-External consumers should include `<AssetSuite/AssetSuite.h>` from that public include root. These headers define the SDK-facing result/version contract, opaque handles, and plain descriptor structs without requiring `Windows.h`, STL containers, or internal implementation headers.
+Build the project with Premake-generated Visual Studio projects. The package output contains Debug and Release binaries plus the public SDK headers under `bin/<Config>/inc/AssetSuite`.
+
+The installed public header surface is validated by `PublicHeaderCompile`, which compiles an external-consumer translation unit and checks that installed headers do not expose platform-specific, legacy, or STL-owning API types.
 
 ## Installation
-The library could be built from the source using Premake (I find it much easier and intuitive then CMake) or you can use pre-built binaries provided with the release.
+
+AssetSuite can be built from source using Premake or consumed from release artifacts when available.
 
 ## License
+
 This library is provided as is, and it uses the MIT license.

@@ -4,10 +4,11 @@
 CREATE_LIB_DIRECTORY = "{MKDIR} %{cfg.targetdir}/../lib"
 CREATE_INC_DIRECTORY = "{MKDIR} %{cfg.targetdir}/../inc"
 CREATE_PUBLIC_INC_DIRECTORY = "{MKDIR} %{cfg.targetdir}/../inc/AssetSuite"
+CLEAN_INC_DIRECTORY = "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Remove-Item -LiteralPath '%{cfg.targetdir}/../inc' -Recurse -Force -ErrorAction SilentlyContinue\""
 COPY_RELEASE_LIB_FILE = "{COPY} %{cfg.targetdir}/assetsuite_r.lib %{cfg.targetdir}/../lib"
 COPY_DEBUG_LIB_FILE = "{COPY} %{cfg.targetdir}/assetsuite_d.lib %{cfg.targetdir}/../lib"
 COPY_PUBLIC_HEADER_FILES = "{COPY} %{cfg.targetdir}/../../../include/AssetSuite/*.h %{cfg.targetdir}/../inc/AssetSuite"
-COPY_LEGACY_HEADER_FILES = "{COPY} %{cfg.targetdir}/../../../source/common/*.h %{cfg.targetdir}/../inc"
+RUN_PUBLIC_HEADER_HYGIENE_CHECK = "powershell -NoProfile -ExecutionPolicy Bypass -File %{cfg.targetdir}/../../../validation/public_header_hygiene/PublicHeaderHygiene.ps1 -Roots include/AssetSuite,bin/%{cfg.buildcfg}/inc"
 LOCATION_DIRECTORY_NAME = "build"
 
 -- Global Functions
@@ -47,7 +48,7 @@ workspace "AssetSuite"
 		project "wavefront"
 		project "bitstream"
 	group "Demo"
-		project "DemoApplication"
+		project "LegacyDemoApplication"
 
 project "AssetSuite"
     kind "SharedLib"
@@ -61,10 +62,10 @@ project "AssetSuite"
 	-- Copy some files over to have a full DLL release
 	postbuildcommands {
 		CREATE_LIB_DIRECTORY,
+		CLEAN_INC_DIRECTORY,
 		CREATE_INC_DIRECTORY,
 		CREATE_PUBLIC_INC_DIRECTORY,
-		COPY_PUBLIC_HEADER_FILES,
-		COPY_LEGACY_HEADER_FILES
+		COPY_PUBLIC_HEADER_FILES
 	}
     files {
 		"include/AssetSuite/**.h",
@@ -140,7 +141,7 @@ project "bitstream"
 	SetDebugFilters()
 	SetReleaseFilters()
 	
-project "DemoApplication"
+project "LegacyDemoApplication"
 	kind "ConsoleApp"
 	language "C++"
 	cppdialect "C++17"
@@ -181,8 +182,9 @@ project "PublicHeaderCompile"
 	language "C++"
 	cppdialect "C++20"
 	targetdir "bin/%{cfg.buildcfg}/validation"
-	files { "validation/public_header_compile/**.cpp" }
+	files { "validation/public_header_compile/**.cpp", "validation/public_header_hygiene/**.ps1" }
 	includedirs { "bin/%{cfg.buildcfg}/inc" }
 	dependson { "AssetSuite" }
+	prebuildcommands { RUN_PUBLIC_HEADER_HYGIENE_CHECK }
 	SetDebugFilters()
 	SetReleaseFilters()
