@@ -22,6 +22,24 @@ The public headers are provided under `include/AssetSuite` and are installed und
 
 Public headers do not require `Windows.h`, STL containers, filesystem path types, or internal implementation classes.
 
+## Context Lifecycle Contract
+
+The 2.0 runtime is entered through an opaque `AssetSuite::ContextHandle`.
+Context ownership belongs to the caller after successful creation and must be
+released with `AssetSuite::DestroyContext`.
+
+`AssetSuite::CreateContext(nullptr, &context)` is valid and creates a context
+with default settings. A non-null `AssetSuite::ContextDesc` must use
+`structSize == sizeof(AssetSuite::ContextDesc)` and `flags == 0`. Smaller,
+larger, or otherwise mismatched descriptor sizes are rejected with
+`AssetSuite::Result::ErrorInvalidArgument` for now. Unknown context flag bits are
+also rejected with `AssetSuite::Result::ErrorInvalidArgument`.
+
+`AssetSuite::DestroyContext` takes a pointer to the caller's handle so the SDK
+can set it to `nullptr` after successful destruction. Calling
+`AssetSuite::DestroyContext(nullptr)` or passing a pointer to a null context
+handle returns a defined error instead of causing undefined behavior.
+
 ## Usage
 
 The current 2.0 public SDK headers expose the stable type and version contract used by external consumers:
