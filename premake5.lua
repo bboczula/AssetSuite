@@ -167,8 +167,13 @@ project "UnitTest"
 	language "C++"
 	cppdialect "C++17"
 	targetdir "bin/%{cfg.buildcfg}/tests"
-	files { "unit_tests/**.h", "unit_tests/**.cpp" }
-	links { "AssetSuite", "zlib", "bmp", "png", "ppm", "wavefront", "bitstream" }
+	defines { "ASSETSUITE_UNIT_TEST_PRIVATE_RUNTIME" }
+	files {
+		"unit_tests/**.h", "unit_tests/**.cpp",
+		"source/common/AssetSuiteContext.cpp",
+		"source/runtime/**.cpp"
+	}
+	links { "AssetSuite", "zlib", "bmp", "png", "ppm", "bypass", "wavefront", "bitstream" }
 	includedirs { "include" }
 	SetDebugFilters()
 	SetReleaseFilters()

@@ -2,6 +2,7 @@
 #include <CppUnitTest.h>
 #include "../source/common/AssetSuite.h"
 #include "../source/common/AssetSuiteContext.h"
+#include "../source/runtime/AssetSuiteRuntime.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
@@ -83,14 +84,13 @@ namespace GeneralUnitTests
 
 			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(&desc, &context));
 
-			AssetSuite::RuntimeSmokeStatus status = {};
-			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CaptureRuntimeSmokeStatus(context, &status));
-			Assert::AreEqual(desc.structSize, status.descriptorStructSize);
-			Assert::AreEqual(desc.flags, status.descriptorFlags);
-			Assert::IsTrue(status.hasBmpDecoder);
-			Assert::IsTrue(status.hasPngDecoder);
-			Assert::IsTrue(status.hasWavefrontDecoder);
-			Assert::AreEqual(static_cast<uint32_t>(0), status.diagnosticsEntryCount);
+			const auto& runtime = context->Runtime();
+			Assert::AreEqual(desc.structSize, runtime.Descriptor().structSize);
+			Assert::AreEqual(desc.flags, runtime.Descriptor().flags);
+			Assert::IsNotNull(runtime.CodecRegistry().FindImageDecoder(AssetSuite::ImageDecoders::BMP));
+			Assert::IsNotNull(runtime.CodecRegistry().FindImageDecoder(AssetSuite::ImageDecoders::PNG));
+			Assert::IsNotNull(runtime.CodecRegistry().FindMeshDecoder(AssetSuite::MeshDecoders::WAVEFRONT));
+			Assert::AreEqual(static_cast<size_t>(0), runtime.Diagnostics().Entries().size());
 
 			DestroyContextForCleanup(context);
 		}
@@ -301,18 +301,13 @@ namespace GeneralUnitTests
 			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &firstContext));
 			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &secondContext));
 
-			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::AddRuntimeSmokeDiagnostic(firstContext));
+			firstContext->Runtime().Diagnostics().Add(AssetSuite::ErrorCode::Undefined, "runtime smoke diagnostic");
 
-			AssetSuite::RuntimeSmokeStatus firstStatus = {};
-			AssetSuite::RuntimeSmokeStatus secondStatus = {};
-			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CaptureRuntimeSmokeStatus(firstContext, &firstStatus));
-			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CaptureRuntimeSmokeStatus(secondContext, &secondStatus));
-			Assert::AreEqual(static_cast<uint32_t>(1), firstStatus.diagnosticsEntryCount);
-			Assert::AreEqual(static_cast<uint32_t>(0), secondStatus.diagnosticsEntryCount);
+			Assert::AreEqual(static_cast<size_t>(1), firstContext->Runtime().Diagnostics().Entries().size());
+			Assert::AreEqual(static_cast<size_t>(0), secondContext->Runtime().Diagnostics().Entries().size());
 
-			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::ClearRuntimeSmokeDiagnostics(firstContext));
-			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CaptureRuntimeSmokeStatus(firstContext, &firstStatus));
-			Assert::AreEqual(static_cast<uint32_t>(0), firstStatus.diagnosticsEntryCount);
+			firstContext->Runtime().Diagnostics().Clear();
+			Assert::AreEqual(static_cast<size_t>(0), firstContext->Runtime().Diagnostics().Entries().size());
 
 			DestroyContextForCleanup(secondContext);
 			DestroyContextForCleanup(firstContext);
@@ -323,14 +318,20 @@ namespace GeneralUnitTests
 			AssetSuite::ContextHandle context = nullptr;
 			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
 
-			AssetSuite::RuntimeSmokeStatus status = {};
-			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CaptureRuntimeSmokeStatus(context, &status));
+			auto& registry = context->Runtime().CodecRegistry();
+			AssetSuite::ImageDecoder* imageDecoder = registry.FindImageDecoder(AssetSuite::ImageDecoders::BMP);
+			AssetSuite::MeshDecoder* meshDecoder = registry.FindMeshDecoder(AssetSuite::MeshDecoders::WAVEFRONT);
 
-			Assert::IsTrue(status.hasBmpDecoder);
-			Assert::IsTrue(status.hasPngDecoder);
-			Assert::IsTrue(status.hasWavefrontDecoder);
-			Assert::IsTrue(status.rejectsImageSentinels);
-			Assert::IsTrue(status.rejectsMeshSentinels);
+			Assert::IsNotNull(imageDecoder);
+			Assert::IsNotNull(meshDecoder);
+			Assert::IsNull(registry.FindImageDecoder(AssetSuite::ImageDecoders::Auto));
+			Assert::IsNull(registry.FindImageDecoder(AssetSuite::ImageDecoders::MaxDecoders));
+			Assert::IsNull(registry.FindMeshDecoder(AssetSuite::MeshDecoders::Auto));
+			Assert::IsNull(registry.FindMeshDecoder(AssetSuite::MeshDecoders::MaxDecoders));
+			Assert::IsFalse(registry.RegisterImageDecoder(AssetSuite::ImageDecoders::Auto, *imageDecoder));
+			Assert::IsFalse(registry.RegisterImageDecoder(AssetSuite::ImageDecoders::MaxDecoders, *imageDecoder));
+			Assert::IsFalse(registry.RegisterMeshDecoder(AssetSuite::MeshDecoders::Auto, *meshDecoder));
+			Assert::IsFalse(registry.RegisterMeshDecoder(AssetSuite::MeshDecoders::MaxDecoders, *meshDecoder));
 
 			DestroyContextForCleanup(context);
 		}

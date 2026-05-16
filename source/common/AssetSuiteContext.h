@@ -26,20 +26,5 @@ namespace AssetSuite
 		std::unique_ptr<Internal::RuntimeContext> runtime;
 	};
 
-	struct RuntimeSmokeStatus
-	{
-		uint32_t descriptorStructSize;
-		uint32_t descriptorFlags;
-		uint32_t diagnosticsEntryCount;
-		bool hasBmpDecoder;
-		bool hasPngDecoder;
-		bool hasWavefrontDecoder;
-		bool rejectsImageSentinels;
-		bool rejectsMeshSentinels;
-	};
-
 	ASSET_SUITE_API void DispatchLogEvent(ContextHandle context, LogLevel level, const char* message);
-	ASSET_SUITE_API Result CaptureRuntimeSmokeStatus(ContextHandle context, RuntimeSmokeStatus* outStatus);
-	ASSET_SUITE_API Result AddRuntimeSmokeDiagnostic(ContextHandle context);
-	ASSET_SUITE_API Result ClearRuntimeSmokeDiagnostics(ContextHandle context);
 }

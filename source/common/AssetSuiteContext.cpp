@@ -64,6 +64,7 @@ AssetSuite::Result AssetSuite::Internal::DestroyContextHandle(ContextHandle* con
 	return Result::Success;
 }
 
+#if !defined(ASSETSUITE_UNIT_TEST_PRIVATE_RUNTIME)
 void AssetSuite::DispatchLogEvent(ContextHandle context, LogLevel level, const char* message)
 {
 	if (!context)
@@ -73,55 +74,4 @@ void AssetSuite::DispatchLogEvent(ContextHandle context, LogLevel level, const c
 
 	context->Runtime().DispatchLogEvent(level, message);
 }
-
-AssetSuite::Result AssetSuite::CaptureRuntimeSmokeStatus(ContextHandle context, RuntimeSmokeStatus* outStatus)
-{
-	if (!context)
-	{
-		return Result::ErrorInvalidContext;
-	}
-
-	if (!outStatus)
-	{
-		return Result::ErrorInvalidArgument;
-	}
-
-	auto& runtime = context->Runtime();
-	auto& codecRegistry = runtime.CodecRegistry();
-	outStatus->descriptorStructSize = runtime.Descriptor().structSize;
-	outStatus->descriptorFlags = runtime.Descriptor().flags;
-	outStatus->diagnosticsEntryCount = static_cast<uint32_t>(runtime.Diagnostics().Entries().size());
-	outStatus->hasBmpDecoder = codecRegistry.FindImageDecoder(ImageDecoders::BMP) != nullptr;
-	outStatus->hasPngDecoder = codecRegistry.FindImageDecoder(ImageDecoders::PNG) != nullptr;
-	outStatus->hasWavefrontDecoder = codecRegistry.FindMeshDecoder(MeshDecoders::WAVEFRONT) != nullptr;
-	outStatus->rejectsImageSentinels =
-		codecRegistry.FindImageDecoder(ImageDecoders::Auto) == nullptr &&
-		codecRegistry.FindImageDecoder(ImageDecoders::MaxDecoders) == nullptr;
-	outStatus->rejectsMeshSentinels =
-		codecRegistry.FindMeshDecoder(MeshDecoders::Auto) == nullptr &&
-		codecRegistry.FindMeshDecoder(MeshDecoders::MaxDecoders) == nullptr;
-
-	return Result::Success;
-}
-
-AssetSuite::Result AssetSuite::AddRuntimeSmokeDiagnostic(ContextHandle context)
-{
-	if (!context)
-	{
-		return Result::ErrorInvalidContext;
-	}
-
-	context->Runtime().Diagnostics().Add(ErrorCode::Undefined, "runtime smoke diagnostic");
-	return Result::Success;
-}
-
-AssetSuite::Result AssetSuite::ClearRuntimeSmokeDiagnostics(ContextHandle context)
-{
-	if (!context)
-	{
-		return Result::ErrorInvalidContext;
-	}
-
-	context->Runtime().Diagnostics().Clear();
-	return Result::Success;
-}
+#endif
