@@ -1,0 +1,22 @@
+# Keep text files normalized so Visual Studio does not prompt about mixed line endings.
+.gitattributes text eol=crlf
+.gitignore text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.cpp text eol=crlf
+*.h text eol=crlf
+*.hpp text eol=crlf
+*.lua text eol=crlf
+*.md text eol=crlf
+*.obj text eol=crlf
+*.ps1 text eol=crlf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Preserve binary assets.
+*.bmp binary
+*.dll binary
+*.exe binary
+*.lib binary
+*.png binary
+*.zip binary
