@@ -43,7 +43,8 @@ handle, including a repeated destroy through the same handle variable, returns
 
 ## Usage
 
-The current 2.0 public SDK headers expose the stable type and version contract used by external consumers:
+The current 2.0 public SDK headers expose the stable type, version, and context
+lifecycle contract used by external consumers:
 
 ```cpp
 #include <AssetSuite/AssetSuite.h>
@@ -67,6 +68,20 @@ int main()
 	AssetSuite::MeshHandle mesh = nullptr;
 
 	AssetSuite::ContextDesc contextDesc = { sizeof(AssetSuite::ContextDesc), 0 };
+	result = AssetSuite::CreateContext(&contextDesc, &context);
+	if (result != AssetSuite::Result::Success)
+	{
+		const char* message = AssetSuite::GetResultString(result);
+		return message != nullptr ? 3 : 4;
+	}
+
+	result = AssetSuite::DestroyContext(&context);
+	if (result != AssetSuite::Result::Success)
+	{
+		const char* message = AssetSuite::GetResultString(result);
+		return message != nullptr ? 5 : 6;
+	}
+
 	AssetSuite::BlobDesc blobDesc = {
 		sizeof(AssetSuite::BlobDesc),
 		0,
