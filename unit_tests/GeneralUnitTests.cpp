@@ -76,6 +76,25 @@ namespace GeneralUnitTests
 			DestroyContextForCleanup(context);
 		}
 
+		TEST_METHOD(CreateContextInitializesRuntimeServices)
+		{
+			AssetSuite::ContextDesc desc = { sizeof(AssetSuite::ContextDesc), 0 };
+			AssetSuite::ContextHandle context = nullptr;
+
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(&desc, &context));
+
+			AssetSuite::RuntimeSmokeStatus status = {};
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CaptureRuntimeSmokeStatus(context, &status));
+			Assert::AreEqual(desc.structSize, status.descriptorStructSize);
+			Assert::AreEqual(desc.flags, status.descriptorFlags);
+			Assert::IsTrue(status.hasBmpDecoder);
+			Assert::IsTrue(status.hasPngDecoder);
+			Assert::IsTrue(status.hasWavefrontDecoder);
+			Assert::AreEqual(static_cast<uint32_t>(0), status.diagnosticsEntryCount);
+
+			DestroyContextForCleanup(context);
+		}
+
 		TEST_METHOD(CreateContextRejectsNullOutput)
 		{
 			const auto result = AssetSuite::CreateContext(nullptr, nullptr);
@@ -271,6 +290,47 @@ namespace GeneralUnitTests
 			AssetSuite::DispatchLogEvent(context, AssetSuite::LogLevel::Fatal, "unregistered");
 
 			Assert::AreEqual(0, capture.callCount);
+
+			DestroyContextForCleanup(context);
+		}
+
+		TEST_METHOD(RuntimeDiagnosticsAreContextScoped)
+		{
+			AssetSuite::ContextHandle firstContext = nullptr;
+			AssetSuite::ContextHandle secondContext = nullptr;
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &firstContext));
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &secondContext));
+
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::AddRuntimeSmokeDiagnostic(firstContext));
+
+			AssetSuite::RuntimeSmokeStatus firstStatus = {};
+			AssetSuite::RuntimeSmokeStatus secondStatus = {};
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CaptureRuntimeSmokeStatus(firstContext, &firstStatus));
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CaptureRuntimeSmokeStatus(secondContext, &secondStatus));
+			Assert::AreEqual(static_cast<uint32_t>(1), firstStatus.diagnosticsEntryCount);
+			Assert::AreEqual(static_cast<uint32_t>(0), secondStatus.diagnosticsEntryCount);
+
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::ClearRuntimeSmokeDiagnostics(firstContext));
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CaptureRuntimeSmokeStatus(firstContext, &firstStatus));
+			Assert::AreEqual(static_cast<uint32_t>(0), firstStatus.diagnosticsEntryCount);
+
+			DestroyContextForCleanup(secondContext);
+			DestroyContextForCleanup(firstContext);
+		}
+
+		TEST_METHOD(RuntimeCodecRegistryRejectsSentinelSlots)
+		{
+			AssetSuite::ContextHandle context = nullptr;
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+
+			AssetSuite::RuntimeSmokeStatus status = {};
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CaptureRuntimeSmokeStatus(context, &status));
+
+			Assert::IsTrue(status.hasBmpDecoder);
+			Assert::IsTrue(status.hasPngDecoder);
+			Assert::IsTrue(status.hasWavefrontDecoder);
+			Assert::IsTrue(status.rejectsImageSentinels);
+			Assert::IsTrue(status.rejectsMeshSentinels);
 
 			DestroyContextForCleanup(context);
 		}
