@@ -16,6 +16,7 @@ The public headers are provided under `include/AssetSuite` and are installed und
 
 - `AssetSuite::Result` and `AssetSuite::Version`
 - `AssetSuite::GetVersion` and `AssetSuite::GetResultString`
+- `AssetSuite::LogLevel`, `AssetSuite::LoggingCallback`, and `AssetSuite::SetLoggingCallback`
 - opaque handle types such as `AssetSuite::ContextHandle`, `AssetSuite::BlobHandle`, `AssetSuite::ImageHandle`, and `AssetSuite::MeshHandle`
 - plain descriptor structs such as `AssetSuite::ContextDesc`, `AssetSuite::BlobDesc`, `AssetSuite::ImageDesc`, and `AssetSuite::MeshDesc`
 - SDK enums such as `AssetSuite::AssetFormat`, `AssetSuite::PixelFormat`, and `AssetSuite::MeshAttributeFlags`
@@ -44,6 +45,26 @@ can set it to `nullptr` after successful destruction. Calling
 handle, including a repeated destroy through the same handle variable, returns
 `AssetSuite::Result::ErrorInvalidContext` instead of causing undefined behavior.
 
+## Logging Callback Contract
+
+Logging is configured per `AssetSuite::ContextHandle` with
+`AssetSuite::SetLoggingCallback`. A successful call replaces the context's
+previous callback pointer, minimum enabled `AssetSuite::LogLevel`, and opaque
+`userData` pointer together. Passing `nullptr` for the callback unregisters
+logging for that context and discards the previous callback state.
+
+`AssetSuite::LogLevel` values are ordered from least to most severe:
+`Trace`, `Debug`, `Info`, `Warning`, `Error`, and `Fatal`. The configured
+minimum level is inclusive: events below it are suppressed, while events equal
+to or above it are delivered when a callback is registered.
+
+The callback receives a null-terminated UTF-8 message pointer and the exact
+`userData` pointer supplied during registration. The SDK does not take ownership
+of `userData`, does not interpret it, and does not manage its lifetime. The
+message pointer is valid only for the duration of the callback invocation.
+Callback invocation follows the same external synchronization expectations as
+other operations on the context.
+
 ## Usage
 
 The current 2.0 public SDK headers expose the stable type, version, and context
@@ -53,6 +74,20 @@ lifecycle contract used by external consumers:
 #include <AssetSuite/AssetSuite.h>
 
 #include <cstdint>
+
+struct AppLogger
+{
+	int messagesSeen;
+};
+
+void OnAssetSuiteLog(AssetSuite::LogLevel level, const char* message, void* userData)
+{
+	AppLogger* logger = static_cast<AppLogger*>(userData);
+	++logger->messagesSeen;
+
+	(void)level;
+	(void)message;
+}
 
 int main()
 {
@@ -78,11 +113,34 @@ int main()
 		return message != nullptr ? 3 : 4;
 	}
 
-	result = AssetSuite::DestroyContext(&context);
+	AppLogger logger = {};
+	result = AssetSuite::SetLoggingCallback(
+		context,
+		&OnAssetSuiteLog,
+		AssetSuite::LogLevel::Warning,
+		&logger);
 	if (result != AssetSuite::Result::Success)
 	{
 		const char* message = AssetSuite::GetResultString(result);
 		return message != nullptr ? 5 : 6;
+	}
+
+	result = AssetSuite::SetLoggingCallback(
+		context,
+		nullptr,
+		AssetSuite::LogLevel::Trace,
+		nullptr);
+	if (result != AssetSuite::Result::Success)
+	{
+		const char* message = AssetSuite::GetResultString(result);
+		return message != nullptr ? 7 : 8;
+	}
+
+	result = AssetSuite::DestroyContext(&context);
+	if (result != AssetSuite::Result::Success)
+	{
+		const char* message = AssetSuite::GetResultString(result);
+		return message != nullptr ? 9 : 10;
 	}
 
 	AssetSuite::BlobDesc blobDesc = {

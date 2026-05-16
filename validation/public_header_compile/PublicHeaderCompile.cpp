@@ -56,6 +56,17 @@ static_assert(std::is_same_v<std::underlying_type_t<AssetSuite::Result>, int32_t
 static_assert(std::is_same_v<std::underlying_type_t<AssetSuite::PixelFormat>, uint32_t>);
 static_assert(std::is_same_v<std::underlying_type_t<AssetSuite::AssetFormat>, uint32_t>);
 static_assert(std::is_same_v<std::underlying_type_t<AssetSuite::MeshAttributeFlags>, uint32_t>);
+static_assert(std::is_same_v<std::underlying_type_t<AssetSuite::LogLevel>, uint32_t>);
+static_assert(static_cast<uint32_t>(AssetSuite::LogLevel::Trace) == 0);
+static_assert(static_cast<uint32_t>(AssetSuite::LogLevel::Debug) == 1);
+static_assert(static_cast<uint32_t>(AssetSuite::LogLevel::Info) == 2);
+static_assert(static_cast<uint32_t>(AssetSuite::LogLevel::Warning) == 3);
+static_assert(static_cast<uint32_t>(AssetSuite::LogLevel::Error) == 4);
+static_assert(static_cast<uint32_t>(AssetSuite::LogLevel::Fatal) == 5);
+
+static_assert(std::is_same_v<
+	AssetSuite::LoggingCallback,
+	void (*)(AssetSuite::LogLevel, const char*, void*)>);
 
 static_assert(std::is_pointer_v<AssetSuite::ContextHandle>);
 static_assert(std::is_pointer_v<AssetSuite::BlobHandle>);
@@ -83,6 +94,17 @@ static_assert(std::is_same_v<
 static_assert(std::is_same_v<
 	decltype(&AssetSuite::DestroyContext),
 	AssetSuite::Result (*)(AssetSuite::ContextHandle*)>);
+static_assert(std::is_same_v<
+	decltype(&AssetSuite::SetLoggingCallback),
+	AssetSuite::Result (*)(
+		AssetSuite::ContextHandle,
+		AssetSuite::LoggingCallback,
+		AssetSuite::LogLevel,
+		void*)>);
+
+void PublicLoggingCallback(AssetSuite::LogLevel, const char*, void*)
+{
+}
 
 int main()
 {
@@ -99,6 +121,16 @@ int main()
 	const AssetSuite::Result createDefaultResult = AssetSuite::CreateContext(nullptr, &context);
 	const AssetSuite::Result destroyDefaultResult = AssetSuite::DestroyContext(&context);
 	const AssetSuite::Result createExplicitResult = AssetSuite::CreateContext(&contextDesc, &context);
+	const AssetSuite::Result setLoggingResult = AssetSuite::SetLoggingCallback(
+		context,
+		&PublicLoggingCallback,
+		AssetSuite::LogLevel::Warning,
+		&contextDesc);
+	const AssetSuite::Result unregisterLoggingResult = AssetSuite::SetLoggingCallback(
+		context,
+		nullptr,
+		AssetSuite::LogLevel::Trace,
+		nullptr);
 	const AssetSuite::Result destroyExplicitResult = AssetSuite::DestroyContext(&context);
 
 	return context || blob || image || mesh ||
@@ -109,5 +141,7 @@ int main()
 		createDefaultResult == AssetSuite::Result::ErrorUnknown ||
 		destroyDefaultResult == AssetSuite::Result::ErrorUnknown ||
 		createExplicitResult == AssetSuite::Result::ErrorUnknown ||
+		setLoggingResult == AssetSuite::Result::ErrorUnknown ||
+		unregisterLoggingResult == AssetSuite::Result::ErrorUnknown ||
 		destroyExplicitResult == AssetSuite::Result::ErrorUnknown;
 }
