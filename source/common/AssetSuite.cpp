@@ -86,7 +86,10 @@ AssetSuite::Result AssetSuite::CreateContext(const ContextDesc* desc, ContextHan
 		return Result::ErrorInvalidArgument;
 	}
 
-	*outContext = nullptr;
+	if (*outContext)
+	{
+		return Result::ErrorInvalidArgument;
+	}
 
 	ContextDesc normalizedDesc = DEFAULT_CONTEXT_DESC;
 	const Result validationResult = NormalizeContextDesc(desc, normalizedDesc);
@@ -102,6 +105,10 @@ AssetSuite::Result AssetSuite::CreateContext(const ContextDesc* desc, ContextHan
 	catch (const std::bad_alloc&)
 	{
 		return Result::ErrorOutOfMemory;
+	}
+	catch (...)
+	{
+		return Result::ErrorUnknown;
 	}
 
 	return Result::Success;

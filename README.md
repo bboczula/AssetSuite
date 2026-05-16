@@ -34,6 +34,9 @@ with default settings. A non-null `AssetSuite::ContextDesc` must use
 larger, or otherwise mismatched descriptor sizes are rejected with
 `AssetSuite::Result::ErrorInvalidArgument` for now. Unknown context flag bits are
 also rejected with `AssetSuite::Result::ErrorInvalidArgument`.
+The output handle passed to `AssetSuite::CreateContext` must point to a null
+handle; passing a pointer to an already-owned context returns
+`AssetSuite::Result::ErrorInvalidArgument` and leaves that handle unchanged.
 
 `AssetSuite::DestroyContext` takes a pointer to the caller's handle so the SDK
 can set it to `nullptr` after successful destruction. Calling

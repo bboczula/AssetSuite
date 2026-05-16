@@ -85,7 +85,7 @@ namespace GeneralUnitTests
 		TEST_METHOD(CreateContextRejectsInvalidDescriptorSize)
 		{
 			AssetSuite::ContextDesc desc = { sizeof(AssetSuite::ContextDesc) - 1, 0 };
-			AssetSuite::ContextHandle context = reinterpret_cast<AssetSuite::ContextHandle>(1);
+			AssetSuite::ContextHandle context = nullptr;
 
 			const auto result = AssetSuite::CreateContext(&desc, &context);
 
@@ -96,12 +96,26 @@ namespace GeneralUnitTests
 		TEST_METHOD(CreateContextRejectsReservedFlags)
 		{
 			AssetSuite::ContextDesc desc = { sizeof(AssetSuite::ContextDesc), 1 };
-			AssetSuite::ContextHandle context = reinterpret_cast<AssetSuite::ContextHandle>(1);
+			AssetSuite::ContextHandle context = nullptr;
 
 			const auto result = AssetSuite::CreateContext(&desc, &context);
 
 			Assert::AreEqual(true, AssetSuite::Result::ErrorInvalidArgument == result);
 			Assert::IsNull(context);
+		}
+
+		TEST_METHOD(CreateContextRejectsNonNullOutputAndPreservesHandle)
+		{
+			AssetSuite::ContextHandle context = nullptr;
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+			AssetSuite::ContextHandle originalContext = context;
+
+			const auto result = AssetSuite::CreateContext(nullptr, &context);
+
+			Assert::AreEqual(true, AssetSuite::Result::ErrorInvalidArgument == result);
+			Assert::IsTrue(originalContext == context);
+
+			DestroyContextForCleanup(context);
 		}
 
 		TEST_METHOD(DestroyContextReleasesValidContextAndClearsHandle)

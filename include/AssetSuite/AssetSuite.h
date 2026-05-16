@@ -7,8 +7,8 @@
 namespace AssetSuite
 {
 	// Creates a runtime context. Passing nullptr for desc uses default settings.
-	// outContext must not be null and receives ownership of the created handle
-	// on success.
+	// outContext must point to a null handle and receives ownership of the
+	// created handle on success.
 	ASSET_SUITE_API Result CreateContext(const ContextDesc* desc, ContextHandle* outContext);
 
 	// Destroys a runtime context and sets the caller's handle to nullptr on
