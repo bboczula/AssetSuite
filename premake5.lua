@@ -183,8 +183,13 @@ project "PublicHeaderCompile"
 	cppdialect "C++20"
 	targetdir "bin/%{cfg.buildcfg}/validation"
 	files { "validation/public_header_compile/**.cpp", "validation/public_header_hygiene/**.ps1" }
+	links { "AssetSuite" }
 	includedirs { "bin/%{cfg.buildcfg}/inc" }
 	dependson { "AssetSuite" }
 	prebuildcommands { RUN_PUBLIC_HEADER_HYGIENE_CHECK }
 	SetDebugFilters()
 	SetReleaseFilters()
+	filter "configurations:Debug"
+		postbuildcommands { "{COPY} %{cfg.targetdir}/../bin/assetsuite_d.dll %{cfg.targetdir}" }
+	filter "configurations:Release"
+		postbuildcommands { "{COPY} %{cfg.targetdir}/../bin/assetsuite_r.dll %{cfg.targetdir}" }
