@@ -15,4 +15,17 @@ namespace AssetSuite
 	// success. Passing nullptr or a pointer to a null handle returns
 	// Result::ErrorInvalidContext.
 	ASSET_SUITE_API Result DestroyContext(ContextHandle* context);
+
+	// Registers or replaces the logging callback for a runtime context.
+	// Passing nullptr for callback unregisters logging for the context.
+	// Events with a level below minLevel are suppressed. The message pointer
+	// passed to the callback is null-terminated UTF-8 and remains valid only
+	// for the duration of the callback invocation. userData is stored without
+	// interpretation and passed back unchanged. Callback invocation follows the
+	// context's external synchronization requirements.
+	ASSET_SUITE_API Result SetLoggingCallback(
+		ContextHandle context,
+		LoggingCallback callback,
+		LogLevel minLevel,
+		void* userData);
 }

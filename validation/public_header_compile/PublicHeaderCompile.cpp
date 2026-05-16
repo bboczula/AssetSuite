@@ -56,6 +56,11 @@ static_assert(std::is_same_v<std::underlying_type_t<AssetSuite::Result>, int32_t
 static_assert(std::is_same_v<std::underlying_type_t<AssetSuite::PixelFormat>, uint32_t>);
 static_assert(std::is_same_v<std::underlying_type_t<AssetSuite::AssetFormat>, uint32_t>);
 static_assert(std::is_same_v<std::underlying_type_t<AssetSuite::MeshAttributeFlags>, uint32_t>);
+static_assert(std::is_same_v<std::underlying_type_t<AssetSuite::LogLevel>, uint32_t>);
+
+static_assert(std::is_same_v<
+	AssetSuite::LoggingCallback,
+	void (*)(AssetSuite::LogLevel, const char*, void*)>);
 
 static_assert(std::is_pointer_v<AssetSuite::ContextHandle>);
 static_assert(std::is_pointer_v<AssetSuite::BlobHandle>);
@@ -83,6 +88,13 @@ static_assert(std::is_same_v<
 static_assert(std::is_same_v<
 	decltype(&AssetSuite::DestroyContext),
 	AssetSuite::Result (*)(AssetSuite::ContextHandle*)>);
+static_assert(std::is_same_v<
+	decltype(&AssetSuite::SetLoggingCallback),
+	AssetSuite::Result (*)(
+		AssetSuite::ContextHandle,
+		AssetSuite::LoggingCallback,
+		AssetSuite::LogLevel,
+		void*)>);
 
 int main()
 {

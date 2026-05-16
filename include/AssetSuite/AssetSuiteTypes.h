@@ -55,6 +55,18 @@ namespace AssetSuite
 		Index = 1u << 4
 	};
 
+	enum class LogLevel : uint32_t
+	{
+		Trace = 0,
+		Debug = 1,
+		Info = 2,
+		Warning = 3,
+		Error = 4,
+		Fatal = 5
+	};
+
+	typedef void (*LoggingCallback)(LogLevel level, const char* message, void* userData);
+
 	ASSET_SUITE_API Result GetVersion(Version* outVersion);
 	ASSET_SUITE_API const char* GetResultString(Result result);
 }
