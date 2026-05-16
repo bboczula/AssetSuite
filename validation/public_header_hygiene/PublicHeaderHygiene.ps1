@@ -14,6 +14,7 @@ $patterns = [ordered]@{
 	"Win32 alias type" = '\b(?:BYTE|FLOAT|UINT)\b'
 	"STL owning API type" = '\bstd\s*::\s*(?:vector|string|basic_string)\b|\bstd\s*::\s*filesystem\s*::\s*path\b'
 	"Legacy manager or decoder surface" = '\b(?:Manager|Decoder|ImageDecoder|MeshDecoder|ImageDecoders|MeshDecoders)\b'
+	"Private runtime surface" = '\b(?:RuntimeContext|RuntimeState|CodecStorage|CodecRegistry|AllocatorPolicy|Diagnostics|FileLoader)\b'
 }
 
 $violations = New-Object System.Collections.Generic.List[string]

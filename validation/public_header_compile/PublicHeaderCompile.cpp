@@ -23,6 +23,13 @@
 #define MeshDecoder ASSETSUITE_FORBIDDEN_PUBLIC_SYMBOL(MeshDecoder)
 #define ImageDecoders ASSETSUITE_FORBIDDEN_PUBLIC_SYMBOL(ImageDecoders)
 #define MeshDecoders ASSETSUITE_FORBIDDEN_PUBLIC_SYMBOL(MeshDecoders)
+#define RuntimeContext ASSETSUITE_FORBIDDEN_PUBLIC_SYMBOL(RuntimeContext)
+#define RuntimeState ASSETSUITE_FORBIDDEN_PUBLIC_SYMBOL(RuntimeState)
+#define CodecStorage ASSETSUITE_FORBIDDEN_PUBLIC_SYMBOL(CodecStorage)
+#define CodecRegistry ASSETSUITE_FORBIDDEN_PUBLIC_SYMBOL(CodecRegistry)
+#define AllocatorPolicy ASSETSUITE_FORBIDDEN_PUBLIC_SYMBOL(AllocatorPolicy)
+#define Diagnostics ASSETSUITE_FORBIDDEN_PUBLIC_SYMBOL(Diagnostics)
+#define FileLoader ASSETSUITE_FORBIDDEN_PUBLIC_SYMBOL(FileLoader)
 
 #include <AssetSuite/AssetSuite.h>
 #include <AssetSuite/AssetSuiteDescriptors.h>
@@ -51,6 +58,13 @@
 #undef MeshDecoder
 #undef ImageDecoders
 #undef MeshDecoders
+#undef RuntimeContext
+#undef RuntimeState
+#undef CodecStorage
+#undef CodecRegistry
+#undef AllocatorPolicy
+#undef Diagnostics
+#undef FileLoader
 
 static_assert(std::is_same_v<std::underlying_type_t<AssetSuite::Result>, int32_t>);
 static_assert(std::is_same_v<std::underlying_type_t<AssetSuite::PixelFormat>, uint32_t>);

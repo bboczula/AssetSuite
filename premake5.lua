@@ -9,6 +9,7 @@ COPY_RELEASE_LIB_FILE = "{COPY} %{cfg.targetdir}/assetsuite_r.lib %{cfg.targetdi
 COPY_DEBUG_LIB_FILE = "{COPY} %{cfg.targetdir}/assetsuite_d.lib %{cfg.targetdir}/../lib"
 COPY_PUBLIC_HEADER_FILES = "{COPY} %{cfg.targetdir}/../../../include/AssetSuite/*.h %{cfg.targetdir}/../inc/AssetSuite"
 RUN_PUBLIC_HEADER_HYGIENE_CHECK = "powershell -NoProfile -ExecutionPolicy Bypass -File %{cfg.targetdir}/../../../validation/public_header_hygiene/PublicHeaderHygiene.ps1 -Roots include/AssetSuite,bin/%{cfg.buildcfg}/inc"
+RUN_PUBLIC_INSTALL_SURFACE_CHECK = "powershell -NoProfile -ExecutionPolicy Bypass -File %{cfg.targetdir}/../../../validation/public_header_hygiene/AssertPublicInstallSurface.ps1 -InstalledIncludeRoot bin/%{cfg.buildcfg}/inc"
 LOCATION_DIRECTORY_NAME = "build"
 
 -- Global Functions
@@ -187,7 +188,10 @@ project "PublicHeaderCompile"
 	links { "AssetSuite" }
 	includedirs { "bin/%{cfg.buildcfg}/inc" }
 	dependson { "AssetSuite" }
-	prebuildcommands { RUN_PUBLIC_HEADER_HYGIENE_CHECK }
+	prebuildcommands {
+		RUN_PUBLIC_INSTALL_SURFACE_CHECK,
+		RUN_PUBLIC_HEADER_HYGIENE_CHECK
+	}
 	SetDebugFilters()
 	SetReleaseFilters()
 	filter "configurations:Debug"
