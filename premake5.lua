@@ -69,7 +69,8 @@ project "AssetSuite"
 	}
     files {
 		"include/AssetSuite/**.h",
-		"source/common/**.h", "source/common/**.cpp"
+		"source/common/**.h", "source/common/**.cpp",
+		"source/runtime/**.h", "source/runtime/**.cpp"
 	}
 	SetDebugFilters()
 	SetReleaseFilters()

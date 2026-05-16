@@ -3,6 +3,7 @@
 #include "AssetSuite.h"
 #include "AssetSuiteContext.h"
 
+#include "../runtime/AssetSuiteRuntime.h"
 #include "../wavefront/ModelLoader.h"
 #include "../bmp/BmpDecoder.h"
 #include "../png/PngDecoder.h"
@@ -137,9 +138,7 @@ AssetSuite::Result AssetSuite::SetLoggingCallback(
 		return Result::ErrorInvalidContext;
 	}
 
-	context->loggingCallback = callback;
-	context->minimumLogLevel = minLevel;
-	context->loggingUserData = userData;
+	context->Runtime().SetLoggingCallback(callback, minLevel, userData);
 	return Result::Success;
 }
 
