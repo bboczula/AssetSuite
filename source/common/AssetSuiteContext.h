@@ -22,5 +22,5 @@ namespace AssetSuite
 		void* loggingUserData;
 	};
 
-	void DispatchLogEvent(ContextHandle context, LogLevel level, const char* message);
+	ASSET_SUITE_API void DispatchLogEvent(ContextHandle context, LogLevel level, const char* message);
 }
