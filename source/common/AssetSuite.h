@@ -2,7 +2,6 @@
 
 #include <string>
 #include <vector>
-#include <filesystem>
 #include <Windows.h>
 
 #include <AssetSuite/AssetSuite.h>
@@ -23,6 +22,10 @@ namespace AssetSuite
 	class PngDecoder;
 	class PpmEncoder;
 	class BypassEncoder;
+	namespace Internal
+	{
+		struct RuntimeState;
+	}
 
 	enum class ASSET_SUITE_EXPORTS ImageDecoders
 	{
@@ -75,7 +78,11 @@ namespace AssetSuite
 	{
 	public:
 		Manager();
+		explicit Manager(Internal::RuntimeState& runtimeState);
 		~Manager();
+
+		Manager(const Manager&) = delete;
+		Manager& operator=(const Manager&) = delete;
 		
 		void StoreImageToFile(const std::string& filePathAndName, const std::vector<BYTE>& buffer, const ImageDescriptor& imageDescriptor);
 		ErrorCode ImageLoadAndDecode(const char* filePathAndName, ImageDecoders decoder = ImageDecoders::Auto);
@@ -92,38 +99,15 @@ namespace AssetSuite
 		ErrorCode DumpRawBuffer();
 		ErrorCode DumpDecodedBuffer();
 	private:
-		struct FileInfo
-		{
-			std::filesystem::path fullName;
-			std::filesystem::path extension;
-		};
-		struct ImageInfo
-		{
-			UINT width;
-			UINT height;
-			ImageFormat format;
-		};
-		struct MeshInfo
-		{
-			UINT numOfVertices;
-			UINT numOfIndices;
-		};
+		Internal::RuntimeState& State();
+		const Internal::RuntimeState& State() const;
+
 		ErrorCode LoadFileToMemory(const std::string& fileName, bool isBinary = true);
 		void StoreMemoryToFile(const std::vector<BYTE>& buffer, const std::string& fileName);
 		void DumpByteVectorToCpp(const std::vector<BYTE>& byteVector);
 		void DumpBuffer(const std::string& fileName, const std::vector<BYTE>& buffer, ImageDescriptor& descriptor);
-		FileInfo fileInfo;
-		ImageInfo imageInfo;
-		MeshInfo meshInfo;
-		std::vector<BYTE> rawBuffer;
-		std::vector<BYTE> decodedBuffer;
-		std::vector<BYTE> formattedBuffer;
-		ModelLoader* modelLoader;
-		BmpDecoder* bmpDecoder;
-		PngDecoder* pngDecoder;
-		PpmEncoder* ppmEncoder;
-		BypassEncoder* bypassEncoder;
-		ImageDecoder* imageDecoders[(size_t)ImageDecoders::MaxDecoders];
-		MeshDecoder* meshDecoders[(size_t)MeshDecoders::MaxDecoders];
+
+		Internal::RuntimeState* runtimeState;
+		bool ownsRuntimeState;
 	};
 }

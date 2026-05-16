@@ -2,7 +2,8 @@
 
 AssetSuite::Internal::RuntimeContext::RuntimeContext(const ContextDesc& desc)
 	: desc(desc)
-	, manager()
+	, state()
+	, manager(state)
 	, logging()
 {
 }

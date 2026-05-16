@@ -3,6 +3,7 @@
 #include <AssetSuite/AssetSuite.h>
 
 #include "../common/AssetSuite.h"
+#include "AssetSuiteRuntimeState.h"
 
 namespace AssetSuite::Internal
 {
@@ -31,6 +32,7 @@ namespace AssetSuite::Internal
 		};
 
 		ContextDesc desc;
+		RuntimeState state;
 		Manager manager;
 		LoggingState logging;
 	};
