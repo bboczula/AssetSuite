@@ -47,7 +47,7 @@ workspace "AssetSuite"
 		project "wavefront"
 		project "bitstream"
 	group "Demo"
-		project "DemoApplication"
+		project "LegacyDemoApplication"
 
 project "AssetSuite"
     kind "SharedLib"
@@ -139,7 +139,7 @@ project "bitstream"
 	SetDebugFilters()
 	SetReleaseFilters()
 	
-project "DemoApplication"
+project "LegacyDemoApplication"
 	kind "ConsoleApp"
 	language "C++"
 	cppdialect "C++17"
