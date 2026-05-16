@@ -2,6 +2,7 @@
 #include <CppUnitTest.h>
 #include "../source/common/AssetSuite.h"
 #include "../source/common/AssetSuiteContext.h"
+#include "../source/runtime/AssetSuiteRuntime.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
@@ -72,6 +73,24 @@ namespace GeneralUnitTests
 
 			Assert::AreEqual(true, AssetSuite::Result::Success == result);
 			Assert::IsNotNull(context);
+
+			DestroyContextForCleanup(context);
+		}
+
+		TEST_METHOD(CreateContextInitializesRuntimeServices)
+		{
+			AssetSuite::ContextDesc desc = { sizeof(AssetSuite::ContextDesc), 0 };
+			AssetSuite::ContextHandle context = nullptr;
+
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(&desc, &context));
+
+			const auto& runtime = context->Runtime();
+			Assert::AreEqual(desc.structSize, runtime.Descriptor().structSize);
+			Assert::AreEqual(desc.flags, runtime.Descriptor().flags);
+			Assert::IsNotNull(runtime.CodecRegistry().FindImageDecoder(AssetSuite::ImageDecoders::BMP));
+			Assert::IsNotNull(runtime.CodecRegistry().FindImageDecoder(AssetSuite::ImageDecoders::PNG));
+			Assert::IsNotNull(runtime.CodecRegistry().FindMeshDecoder(AssetSuite::MeshDecoders::WAVEFRONT));
+			Assert::AreEqual(static_cast<size_t>(0), runtime.Diagnostics().Entries().size());
 
 			DestroyContextForCleanup(context);
 		}
@@ -271,6 +290,48 @@ namespace GeneralUnitTests
 			AssetSuite::DispatchLogEvent(context, AssetSuite::LogLevel::Fatal, "unregistered");
 
 			Assert::AreEqual(0, capture.callCount);
+
+			DestroyContextForCleanup(context);
+		}
+
+		TEST_METHOD(RuntimeDiagnosticsAreContextScoped)
+		{
+			AssetSuite::ContextHandle firstContext = nullptr;
+			AssetSuite::ContextHandle secondContext = nullptr;
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &firstContext));
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &secondContext));
+
+			firstContext->Runtime().Diagnostics().Add(AssetSuite::ErrorCode::Undefined, "runtime smoke diagnostic");
+
+			Assert::AreEqual(static_cast<size_t>(1), firstContext->Runtime().Diagnostics().Entries().size());
+			Assert::AreEqual(static_cast<size_t>(0), secondContext->Runtime().Diagnostics().Entries().size());
+
+			firstContext->Runtime().Diagnostics().Clear();
+			Assert::AreEqual(static_cast<size_t>(0), firstContext->Runtime().Diagnostics().Entries().size());
+
+			DestroyContextForCleanup(secondContext);
+			DestroyContextForCleanup(firstContext);
+		}
+
+		TEST_METHOD(RuntimeCodecRegistryRejectsSentinelSlots)
+		{
+			AssetSuite::ContextHandle context = nullptr;
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+
+			auto& registry = context->Runtime().CodecRegistry();
+			AssetSuite::ImageDecoder* imageDecoder = registry.FindImageDecoder(AssetSuite::ImageDecoders::BMP);
+			AssetSuite::MeshDecoder* meshDecoder = registry.FindMeshDecoder(AssetSuite::MeshDecoders::WAVEFRONT);
+
+			Assert::IsNotNull(imageDecoder);
+			Assert::IsNotNull(meshDecoder);
+			Assert::IsNull(registry.FindImageDecoder(AssetSuite::ImageDecoders::Auto));
+			Assert::IsNull(registry.FindImageDecoder(AssetSuite::ImageDecoders::MaxDecoders));
+			Assert::IsNull(registry.FindMeshDecoder(AssetSuite::MeshDecoders::Auto));
+			Assert::IsNull(registry.FindMeshDecoder(AssetSuite::MeshDecoders::MaxDecoders));
+			Assert::IsFalse(registry.RegisterImageDecoder(AssetSuite::ImageDecoders::Auto, *imageDecoder));
+			Assert::IsFalse(registry.RegisterImageDecoder(AssetSuite::ImageDecoders::MaxDecoders, *imageDecoder));
+			Assert::IsFalse(registry.RegisterMeshDecoder(AssetSuite::MeshDecoders::Auto, *meshDecoder));
+			Assert::IsFalse(registry.RegisterMeshDecoder(AssetSuite::MeshDecoders::MaxDecoders, *meshDecoder));
 
 			DestroyContextForCleanup(context);
 		}

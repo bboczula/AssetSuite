@@ -3,12 +3,16 @@
 #include "AssetSuite.h"
 #include "AssetSuiteContext.h"
 
+#include "../runtime/AssetSuiteRuntime.h"
+#include "../runtime/AssetSuiteRuntimeState.h"
 #include "../wavefront/ModelLoader.h"
 #include "../bmp/BmpDecoder.h"
 #include "../png/PngDecoder.h"
 #include "../ppm/PpmEncoder.h"
 #include "../bypass/BypassEncoder.h"
 
+#include <fstream>
+#include <iostream>
 #include <new>
 
 namespace
@@ -98,32 +102,12 @@ AssetSuite::Result AssetSuite::CreateContext(const ContextDesc* desc, ContextHan
 		return validationResult;
 	}
 
-	try
-	{
-		*outContext = new AssetSuiteContext_t(normalizedDesc);
-	}
-	catch (const std::bad_alloc&)
-	{
-		return Result::ErrorOutOfMemory;
-	}
-	catch (...)
-	{
-		return Result::ErrorUnknown;
-	}
-
-	return Result::Success;
+	return Internal::CreateContextHandle(normalizedDesc, outContext);
 }
 
 AssetSuite::Result AssetSuite::DestroyContext(ContextHandle* context)
 {
-	if (!context || !*context)
-	{
-		return Result::ErrorInvalidContext;
-	}
-
-	delete *context;
-	*context = nullptr;
-	return Result::Success;
+	return Internal::DestroyContextHandle(context);
 }
 
 AssetSuite::Result AssetSuite::SetLoggingCallback(
@@ -137,52 +121,38 @@ AssetSuite::Result AssetSuite::SetLoggingCallback(
 		return Result::ErrorInvalidContext;
 	}
 
-	context->loggingCallback = callback;
-	context->minimumLogLevel = minLevel;
-	context->loggingUserData = userData;
+	context->Runtime().SetLoggingCallback(callback, minLevel, userData);
 	return Result::Success;
 }
 
-AssetSuite::Manager::Manager() : modelLoader(nullptr), imageInfo(), meshInfo()
+AssetSuite::Manager::Manager()
+	: runtimeState(new Internal::RuntimeState())
+	, ownsRuntimeState(true)
 {
-	modelLoader = new ModelLoader;
-      bmpDecoder = new BmpDecoder;
-      pngDecoder = new PngDecoder;
-      ppmEncoder = new PpmEncoder;
-      bypassEncoder = new BypassEncoder;
+}
 
-      imageDecoders[(size_t)ImageDecoders::BMP] = bmpDecoder;
-      imageDecoders[(size_t)ImageDecoders::PNG] = pngDecoder;
-
-      meshDecoders[(size_t)MeshDecoders::WAVEFRONT] = modelLoader;
+AssetSuite::Manager::Manager(Internal::RuntimeState& runtimeState)
+	: runtimeState(&runtimeState)
+	, ownsRuntimeState(false)
+{
 }
 
 AssetSuite::Manager::~Manager()
 {
-      if (bypassEncoder)
-      {
-            delete bypassEncoder;
-      }
-
-      if (ppmEncoder)
-      {
-            delete ppmEncoder;
-      }
-
-      if (pngDecoder)
-      {
-            delete pngDecoder;
-      }
-
-      if (bmpDecoder)
-      {
-            delete bmpDecoder;
-      }
-
-	if (modelLoader)
+	if (ownsRuntimeState)
 	{
-		delete modelLoader;
+		delete runtimeState;
 	}
+}
+
+AssetSuite::Internal::RuntimeState& AssetSuite::Manager::State()
+{
+	return *runtimeState;
+}
+
+const AssetSuite::Internal::RuntimeState& AssetSuite::Manager::State() const
+{
+	return *runtimeState;
 }
 
 AssetSuite::ErrorCode AssetSuite::Manager::ImageLoadAndDecode(const char* filePathAndName, ImageDecoders decoder)
@@ -204,55 +174,59 @@ AssetSuite::ErrorCode AssetSuite::Manager::ImageLoadAndDecode(const char* filePa
 
 AssetSuite::ErrorCode AssetSuite::Manager::ImageLoad(const char* filePathAndName)
 {
-      fileInfo.fullName = filePathAndName;
-      fileInfo.extension = fileInfo.fullName.extension();
+      auto& state = State();
+      state.fileInfo.fullName = filePathAndName;
+      state.fileInfo.extension = state.fileInfo.fullName.extension();
       return LoadFileToMemory(filePathAndName);
 }
 
 AssetSuite::ErrorCode AssetSuite::Manager::ImageDecode(ImageDecoders decoder)
 {
-      if (rawBuffer.empty())
+      auto& state = State();
+      if (state.rawBuffer.empty())
       {
             return ErrorCode::RawBufferIsEmpty;
       }
 
       if (decoder == ImageDecoders::Auto)
       {
-            if (fileInfo.extension.compare(".bmp") == 0)
+            decoder = state.codecRegistry.ResolveImageDecoder(state.fileInfo.extension);
+            if (decoder == ImageDecoders::Auto)
             {
-                  decoder = ImageDecoders::BMP;
-            }
-            else if (fileInfo.extension.compare(".png") == 0)
-            {
-                  decoder = ImageDecoders::PNG;
-            }
-            else
-            {
+                  state.diagnostics.Add(ErrorCode::FileTypeNotSupported, "Image file type is not supported.");
                   return ErrorCode::FileTypeNotSupported;
             }
       }
 
-      ImageDescriptor descriptor;
-      auto error = imageDecoders[(size_t)decoder]->Decode(decodedBuffer, rawBuffer.data(), descriptor);
+      ImageDecoder* imageDecoder = state.codecRegistry.FindImageDecoder(decoder);
+      if (!imageDecoder)
+      {
+            state.diagnostics.Add(ErrorCode::FileTypeNotSupported, "Image decoder is not registered.");
+            return ErrorCode::FileTypeNotSupported;
+      }
 
-      imageInfo.width = descriptor.width;
-      imageInfo.height = descriptor.height;
-      imageInfo.format = descriptor.format;
+      ImageDescriptor descriptor;
+      auto error = imageDecoder->Decode(state.decodedBuffer, state.rawBuffer.data(), descriptor);
+
+      state.imageInfo.width = descriptor.width;
+      state.imageInfo.height = descriptor.height;
+      state.imageInfo.format = descriptor.format;
 
       return error ? ErrorCode::OK : ErrorCode::Undefined;
 }
 
 AssetSuite::ErrorCode AssetSuite::Manager::ImageGet(OutputFormat format, std::vector<BYTE>& output, ImageDescriptor& descriptor)
 {
-      if (decodedBuffer.empty())
+      const auto& state = State();
+      if (state.decodedBuffer.empty())
       {
             return ErrorCode::DecodedBufferIsEmpty;
       }
 
-      output = decodedBuffer;
-      descriptor.width = imageInfo.width;
-      descriptor.height = imageInfo.height;
-      descriptor.format = imageInfo.format;
+      output = state.decodedBuffer;
+      descriptor.width = state.imageInfo.width;
+      descriptor.height = state.imageInfo.height;
+      descriptor.format = state.imageInfo.format;
 
       return ErrorCode::OK;
 }
@@ -280,45 +254,54 @@ AssetSuite::ErrorCode AssetSuite::Manager::MeshLoadAndDecode(const char* filePat
 
 AssetSuite::ErrorCode AssetSuite::Manager::MeshLoad(const char* filePathAndName)
 {
-      fileInfo.fullName = filePathAndName;
-      fileInfo.extension = fileInfo.fullName.extension();
+      auto& state = State();
+      state.fileInfo.fullName = filePathAndName;
+      state.fileInfo.extension = state.fileInfo.fullName.extension();
       return LoadFileToMemory(filePathAndName, false);
 }
 
 AssetSuite::ErrorCode AssetSuite::Manager::MeshDecode(MeshDecoders decoder)
 {
-      if (rawBuffer.empty())
+      auto& state = State();
+      if (state.rawBuffer.empty())
       {
             return ErrorCode::RawBufferIsEmpty;
       }
 
       if (decoder == MeshDecoders::Auto)
       {
-            if (fileInfo.extension.compare(".obj") == 0)
+            decoder = state.codecRegistry.ResolveMeshDecoder(state.fileInfo.extension);
+            if (decoder == MeshDecoders::Auto)
             {
-                  decoder = MeshDecoders::WAVEFRONT;
-            }
-            else
-            {
+                  state.diagnostics.Add(ErrorCode::FileTypeNotSupported, "Mesh file type is not supported.");
                   return ErrorCode::FileTypeNotSupported;
             }
       }
 
+      MeshDecoder* meshDecoder = state.codecRegistry.FindMeshDecoder(decoder);
+      if (!meshDecoder)
+      {
+            state.diagnostics.Add(ErrorCode::FileTypeNotSupported, "Mesh decoder is not registered.");
+            return ErrorCode::FileTypeNotSupported;
+      }
+
       std::vector<BYTE> output;
       MeshDescriptor descriptor;
-      auto error = meshDecoders[(size_t)decoder]->Decode(output, rawBuffer.data(), descriptor);
+      auto error = meshDecoder->Decode(output, state.rawBuffer.data(), descriptor);
       return error ? ErrorCode::OK : ErrorCode::Undefined;
 }
 
 AssetSuite::ErrorCode AssetSuite::Manager::MeshGet(const char* meshName, MeshOutputFormat format, std::vector<FLOAT>& output, MeshDescriptor& descriptor)
 {
+      auto& state = State();
       // Fetch the group data
-      auto groupOffset = modelLoader->GetGroupOffset(meshName);
-      auto groupSize = modelLoader->GetGroupSize(meshName);
-      meshInfo.numOfVertices = groupSize;
-      meshInfo.numOfIndices = groupSize;
-      descriptor.numOfVertices = meshInfo.numOfVertices;
-      descriptor.numOfIndices = meshInfo.numOfIndices;
+      auto& modelLoader = *state.codecs.modelLoader;
+      auto groupOffset = modelLoader.GetGroupOffset(meshName);
+      auto groupSize = modelLoader.GetGroupSize(meshName);
+      state.meshInfo.numOfVertices = groupSize;
+      state.meshInfo.numOfIndices = groupSize;
+      descriptor.numOfVertices = state.meshInfo.numOfVertices;
+      descriptor.numOfIndices = state.meshInfo.numOfIndices;
 
       if (format == MeshOutputFormat::POSITION)
       {
@@ -326,10 +309,10 @@ AssetSuite::ErrorCode AssetSuite::Manager::MeshGet(const char* meshName, MeshOut
             output.resize(groupSize * 3 * 4);
             for (UINT i = 0; i < groupSize; i++)
             {
-                  auto face = modelLoader->GetFace(i + groupOffset);
+                  auto face = modelLoader.GetFace(i + groupOffset);
                   for (int j = 0; j < 3; j++)
                   {
-                        auto vertex = modelLoader->GetVertex(face.vertexIndex[j]);
+                        auto vertex = modelLoader.GetVertex(face.vertexIndex[j]);
                         output[i * 3 * 4 + j * 4 + 0] = vertex.x;
                         output[i * 3 * 4 + j * 4 + 1] = vertex.y;
                         output[i * 3 * 4 + j * 4 + 2] = vertex.z;
@@ -342,10 +325,10 @@ AssetSuite::ErrorCode AssetSuite::Manager::MeshGet(const char* meshName, MeshOut
             output.resize(groupSize * 3 * 4);
             for (UINT i = 0; i < groupSize; i++)
             {
-                  auto face = modelLoader->GetFace(i + groupOffset);
+                  auto face = modelLoader.GetFace(i + groupOffset);
                   for (int j = 0; j < 3; j++)
                   {
-                        auto normal = modelLoader->GetNormal(face.normalIndex[j]);
+                        auto normal = modelLoader.GetNormal(face.normalIndex[j]);
                         output[i * 3 * 4 + j * 4 + 0] = normal.x;
                         output[i * 3 * 4 + j * 4 + 1] = normal.y;
                         output[i * 3 * 4 + j * 4 + 2] = normal.z;
@@ -358,10 +341,10 @@ AssetSuite::ErrorCode AssetSuite::Manager::MeshGet(const char* meshName, MeshOut
             output.resize(groupSize * 3 * 4);
             for (UINT i = 0; i < groupSize; i++)
             {
-                  auto face = modelLoader->GetFace(i + groupOffset);
+                  auto face = modelLoader.GetFace(i + groupOffset);
                   for (int j = 0; j < 3; j++)
                   {
-                        auto tangent = modelLoader->GetTangent(face.normalIndex[j]);
+                        auto tangent = modelLoader.GetTangent(face.normalIndex[j]);
                         output[i * 3 * 4 + j * 4 + 0] = tangent.x;
                         output[i * 3 * 4 + j * 4 + 1] = tangent.y;
                         output[i * 3 * 4 + j * 4 + 2] = tangent.z;
@@ -374,10 +357,10 @@ AssetSuite::ErrorCode AssetSuite::Manager::MeshGet(const char* meshName, MeshOut
             output.resize(groupSize * 3 * 2);
             for (UINT i = 0; i < groupSize; i++)
             {
-                  auto face = modelLoader->GetFace(i + groupOffset);
+                  auto face = modelLoader.GetFace(i + groupOffset);
                   for (int j = 0; j < 3; j++)
                   {
-                        auto texCoord = modelLoader->GetTextureCoord(face.textureIndex[j]);
+                        auto texCoord = modelLoader.GetTextureCoord(face.textureIndex[j]);
                         output[i * 3 * 2 + j * 2 + 0] = texCoord.x;
                         output[i * 3 * 2 + j * 2 + 1] = texCoord.y;
                   }
@@ -390,80 +373,34 @@ AssetSuite::ErrorCode AssetSuite::Manager::MeshGet(const char* meshName, MeshOut
 AssetSuite::ErrorCode AssetSuite::Manager::DumpRawBuffer()
 {
       ImageDescriptor descriptor;
-      DumpBuffer("rawBuffer.txt", rawBuffer, descriptor);
+      DumpBuffer("rawBuffer.txt", State().rawBuffer, descriptor);
       return ErrorCode::OK;
 }
 
 AssetSuite::ErrorCode AssetSuite::Manager::DumpDecodedBuffer()
 {
       ImageDescriptor descriptor;
-      DumpBuffer("decodedBuffer.txt", decodedBuffer, descriptor);
+      DumpBuffer("decodedBuffer.txt", State().decodedBuffer, descriptor);
       return ErrorCode::OK;
 }
 
 void AssetSuite::Manager::StoreImageToFile(const std::string& filePathAndName, const std::vector<BYTE>& buffer, const ImageDescriptor& imageDescriptor)
 {
-      this->rawBuffer = ppmEncoder->Encode(buffer, imageDescriptor);
-      StoreMemoryToFile(this->rawBuffer, filePathAndName);
+      auto& state = State();
+      state.rawBuffer = state.codecs.ppmEncoder->Encode(buffer, imageDescriptor);
+      StoreMemoryToFile(state.rawBuffer, filePathAndName);
 }
 
 AssetSuite::ErrorCode AssetSuite::Manager::LoadFileToMemory(const std::string& fileName, bool isBinary)
 {
-      // Check if file exists
-      if (!std::filesystem::exists(fileInfo.fullName))
+      auto& state = State();
+      const ErrorCode result = state.fileLoader.LoadToMemory(fileName, isBinary, state.rawBuffer);
+      if (result != ErrorCode::OK)
       {
-            return ErrorCode::NonExistingFile;
+            state.diagnostics.Add(result, "Failed to load file into runtime memory.");
       }
 
-      // Clear the buffer, since it might have something in it
-      rawBuffer.clear();
-
-      //load and decode
-      std::ifstream file(fileName.c_str(), std::ios::in | std::ios::ate | std::ios::binary);
-
-      // Figure out the file size
-      // - this type is an implementation-defined signed integral type used to represent the number of
-      //   characters transered in an I/O opration or the size of I/O buffer. It is usead as a ssinged counterpart of the std:size_T
-      std::streamsize size = 0;
-
-      // - seekg sets the position of the next character to be extracted from the input stream
-      // - it returns the istream object
-      // - first parameter is the offset value, relative to the second parameter
-      // - second parameter can take three values: beginning, current or end of the current stream
-      // - this seems to set the next character to read as the last character in the file
-      if (file.seekg(0, std::ios::end).good())
-      {
-            // tellg() returns the position of the currenct character in the input stream
-            // the return type is the streampos
-            // effectively this returns the position of the last character
-            size = file.tellg();
-      }
-
-      // this seems to set the next character to read as the first character
-      if (file.seekg(0, std::ios::beg).good())
-      {
-            // tellg() function returns the position of the first character
-            // you calculate the size of the file by substracting position of the last character from the first character
-            size -= file.tellg();
-      }
-
-      //read contents of the file into the vector
-      if (size > 0)
-      {
-            rawBuffer.resize((size_t)size);
-            file.read((char*)(&rawBuffer[0]), size);
-            if (!isBinary)
-            {
-                  // Needed for stringstream to work properly.
-                  rawBuffer.push_back('\0');
-            }
-      }
-      else
-      {
-            rawBuffer.clear();
-      }
-
-      return ErrorCode::OK;
+      return result;
 }
 
 void AssetSuite::Manager::StoreMemoryToFile(const std::vector<BYTE>& buffer, const std::string& fileName)
@@ -484,6 +421,6 @@ void AssetSuite::Manager::DumpByteVectorToCpp(const std::vector<BYTE>& byteVecto
 
 void AssetSuite::Manager::DumpBuffer(const std::string& fileName, const std::vector<BYTE>& buffer, ImageDescriptor& descriptor)
 {
-      auto dumpBuffer = bypassEncoder->Encode(buffer, descriptor);
+      auto dumpBuffer = State().codecs.bypassEncoder->Encode(buffer, descriptor);
       StoreMemoryToFile(dumpBuffer, fileName);
 }

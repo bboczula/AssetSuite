@@ -179,7 +179,7 @@ Asset loading entry points will build on these handle and descriptor types as th
 
 Build the project with Premake-generated Visual Studio projects. The package output contains Debug and Release binaries plus the public SDK headers under `bin/<Config>/inc/AssetSuite`.
 
-The installed public header surface is validated by `PublicHeaderCompile`, which compiles an external-consumer translation unit and checks that installed headers do not expose platform-specific, legacy, or STL-owning API types.
+The installed public header surface is validated by `PublicHeaderCompile`, which compiles an external-consumer translation unit and checks that installed headers do not expose platform-specific, legacy, STL-owning, or private runtime implementation types. The validation flow also verifies that installed headers remain under `AssetSuite/*.h`.
 
 ## Installation
 

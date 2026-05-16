@@ -1,39 +1,30 @@
 #pragma once
 
-#include "AssetSuite.h"
+#include <memory>
+
+#include <AssetSuite/AssetSuite.h>
 
 namespace AssetSuite
 {
+	namespace Internal
+	{
+		class RuntimeContext;
+
+		Result CreateContextHandle(const ContextDesc& desc, ContextHandle* outContext) noexcept;
+		Result DestroyContextHandle(ContextHandle* context) noexcept;
+	}
+
 	struct AssetSuiteContext_t
 	{
-		explicit AssetSuiteContext_t(const ContextDesc& desc)
-			: desc(desc)
-			, manager()
-			, loggingCallback(nullptr)
-			, minimumLogLevel(LogLevel::Info)
-			, loggingUserData(nullptr)
-		{
-		}
+		explicit AssetSuiteContext_t(const ContextDesc& desc);
+		~AssetSuiteContext_t();
 
-		ContextDesc desc;
-		Manager manager;
-		LoggingCallback loggingCallback;
-		LogLevel minimumLogLevel;
-		void* loggingUserData;
+		Internal::RuntimeContext& Runtime();
+		const Internal::RuntimeContext& Runtime() const;
+
+	private:
+		std::unique_ptr<Internal::RuntimeContext> runtime;
 	};
 
-	inline void DispatchLogEvent(ContextHandle context, LogLevel level, const char* message)
-	{
-		if (!context || !context->loggingCallback || !message)
-		{
-			return;
-		}
-
-		if (static_cast<uint32_t>(level) < static_cast<uint32_t>(context->minimumLogLevel))
-		{
-			return;
-		}
-
-		context->loggingCallback(level, message, context->loggingUserData);
-	}
+	ASSET_SUITE_API void DispatchLogEvent(ContextHandle context, LogLevel level, const char* message);
 }
