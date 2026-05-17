@@ -11,7 +11,7 @@ The runtime currently owns:
 - allocator policy placeholders
 - diagnostics storage
 - file loading support
-- private blob representations for raw asset bytes and copied source metadata
+- private blob handle storage, raw bytes, and copied source metadata
 - source file metadata
 - raw, decoded, and formatted buffers
 - transient image and mesh metadata
@@ -36,13 +36,14 @@ The public SDK surface is guarded by `PublicHeaderCompile`, `PublicHeaderHygiene
 
 `Internal::Blob` stores raw asset bytes in runtime-owned memory and copies minimal source metadata into the runtime object. The metadata currently tracks the original source path, source extension, and best-known public `AssetFormat` derived from the extension when possible.
 
-`AssetSuiteBlob_t` is the private bridge behind `BlobHandle`. It owns one `Internal::Blob` and remains outside the installed SDK headers.
+`AssetSuiteBlob_t` is the private bridge behind `BlobHandle`. It owns one `Internal::Blob` while the handle is live and remains outside the installed SDK headers.
+
+`RuntimeState::BlobStorage` owns all blob bridge objects for one context. `ReleaseBlob` clears the blob payload and nulls the caller's handle, but the inactive bridge remains in the owning context until context destruction so copied stale handles can be rejected deterministically. Handles from another context are rejected because each context validates against only its own blob storage.
 
 ## Deferred Scope
 
 This runtime layer is intentionally foundational. The following work is deferred to later stories:
 
-- blob registry storage and validated lifetime ownership
 - image and mesh child-handle tracking
 - shared file loading APIs
 - codec probing and richer format detection

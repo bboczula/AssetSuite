@@ -45,6 +45,8 @@ namespace AssetSuite
 	// retains ownership of filePath and may release or mutate that string after
 	// the call returns. A returned blob remains valid until ReleaseBlob is
 	// called for the same context, or until the owning context is destroyed.
+	// Blob operations follow the context's external synchronization
+	// requirements.
 	//
 	// Passing a null context returns Result::ErrorInvalidContext. Passing a
 	// null filePath, null outBlob, or non-null *outBlob returns
@@ -59,6 +61,7 @@ namespace AssetSuite
 	// The blob must have been created by LoadFile on the same context. Passing
 	// a null context returns Result::ErrorInvalidContext. Passing nullptr, a
 	// pointer to a null blob handle, a stale handle, or a handle from another
-	// context returns Result::ErrorInvalidHandle.
+	// context returns Result::ErrorInvalidHandle. On failure, the caller's blob
+	// value is preserved.
 	ASSET_SUITE_API Result ReleaseBlob(ContextHandle context, BlobHandle* blob);
 }
