@@ -41,6 +41,19 @@ namespace
 		normalizedDesc = *desc;
 		return AssetSuite::Result::Success;
 	}
+
+	AssetSuite::Result MapFileLoadResult(AssetSuite::ErrorCode error)
+	{
+		switch (error)
+		{
+		case AssetSuite::ErrorCode::OK:
+			return AssetSuite::Result::Success;
+		case AssetSuite::ErrorCode::NonExistingFile:
+			return AssetSuite::Result::ErrorFileNotFound;
+		default:
+			return AssetSuite::Result::ErrorUnknown;
+		}
+	}
 }
 
 AssetSuite::Result AssetSuite::GetVersion(Version* outVersion)
@@ -139,7 +152,31 @@ AssetSuite::Result AssetSuite::LoadFile(ContextHandle context, const char* fileP
 		return Result::ErrorInvalidArgument;
 	}
 
-	return Result::ErrorUnknown;
+	std::vector<BYTE> rawBytes;
+	const ErrorCode loadResult = context->Runtime().FileLoader().LoadToMemory(filePath, true, rawBytes);
+	const Result mappedResult = MapFileLoadResult(loadResult);
+	if (mappedResult != Result::Success)
+	{
+		context->Runtime().Diagnostics().Add(loadResult, "Failed to load blob source file.");
+		return mappedResult;
+	}
+
+	try
+	{
+		std::vector<uint8_t> bytes(rawBytes.begin(), rawBytes.end());
+		Internal::Blob blob(std::move(bytes), Internal::MakeBlobSourceMetadata(filePath));
+		*outBlob = context->Runtime().BlobStorage().Create(std::move(blob));
+	}
+	catch (const std::bad_alloc&)
+	{
+		return Result::ErrorOutOfMemory;
+	}
+	catch (...)
+	{
+		return Result::ErrorUnknown;
+	}
+
+	return Result::Success;
 }
 
 AssetSuite::Result AssetSuite::ReleaseBlob(ContextHandle context, BlobHandle* blob)
