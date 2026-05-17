@@ -51,6 +51,7 @@ namespace AssetSuite
 		ColorTypeNotSupported = -3,
 		RawBufferIsEmpty = -4,
 		DecodedBufferIsEmpty = -5,
+		IoFailure = -6,
 		Undefined = -1000
 	};
 

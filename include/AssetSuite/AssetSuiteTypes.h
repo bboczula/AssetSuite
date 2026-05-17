@@ -19,6 +19,7 @@ namespace AssetSuite
 		ErrorOutOfMemory = -6,
 		ErrorInvalidContext = -7,
 		ErrorInvalidHandle = -8,
+		ErrorIoFailure = -9,
 		ErrorUnknown = -1000
 	};
 
