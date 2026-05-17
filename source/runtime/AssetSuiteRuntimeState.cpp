@@ -7,9 +7,11 @@
 #include "../bypass/BypassEncoder.h"
 
 #include <fstream>
+#include <limits>
 #include <new>
 #include <atomic>
 #include <cstdint>
+#include <system_error>
 #include <utility>
 
 namespace
@@ -151,36 +153,71 @@ AssetSuite::ErrorCode AssetSuite::Internal::RuntimeState::FileLoader::LoadToMemo
 	bool isBinary,
 	std::vector<uint8_t>& output) const
 {
-	if (!std::filesystem::exists(fileName))
+	std::error_code fileStatusError;
+	if (!std::filesystem::exists(fileName, fileStatusError))
 	{
+		if (fileStatusError)
+		{
+			return ErrorCode::IoFailure;
+		}
+
 		return ErrorCode::NonExistingFile;
 	}
 
-	output.clear();
+	if (!std::filesystem::is_regular_file(fileName, fileStatusError) || fileStatusError)
+	{
+		return ErrorCode::IoFailure;
+	}
 
 	std::ifstream file(fileName.c_str(), std::ios::in | std::ios::ate | std::ios::binary);
-	std::streamsize size = 0;
-
-	if (file.seekg(0, std::ios::end).good())
+	if (!file.is_open())
 	{
-		size = file.tellg();
+		return ErrorCode::IoFailure;
 	}
 
-	if (file.seekg(0, std::ios::beg).good())
+	const std::streampos endPosition = file.tellg();
+	if (endPosition == std::streampos(-1))
 	{
-		size -= file.tellg();
+		return ErrorCode::IoFailure;
 	}
 
+	file.seekg(0, std::ios::beg);
+	if (!file.good())
+	{
+		return ErrorCode::IoFailure;
+	}
+
+	const std::streampos beginPosition = file.tellg();
+	if (beginPosition == std::streampos(-1) || endPosition < beginPosition)
+	{
+		return ErrorCode::IoFailure;
+	}
+
+	const std::streamoff size = endPosition - beginPosition;
+	const auto unsignedSize = static_cast<uintmax_t>(size);
+	if (unsignedSize > static_cast<uintmax_t>((std::numeric_limits<std::streamsize>::max)()) ||
+		unsignedSize > static_cast<uintmax_t>((std::numeric_limits<size_t>::max)()))
+	{
+		return ErrorCode::IoFailure;
+	}
+
+	std::vector<uint8_t> loadedBytes;
 	if (size > 0)
 	{
-		output.resize(static_cast<size_t>(size));
-		file.read(reinterpret_cast<char*>(output.data()), size);
-		if (!isBinary)
+		loadedBytes.resize(static_cast<size_t>(size));
+		file.read(reinterpret_cast<char*>(loadedBytes.data()), static_cast<std::streamsize>(size));
+		if (file.gcount() != static_cast<std::streamsize>(size) || !file)
 		{
-			output.push_back('\0');
+			return ErrorCode::IoFailure;
 		}
 	}
 
+	if (!isBinary)
+	{
+		loadedBytes.push_back('\0');
+	}
+
+	output = std::move(loadedBytes);
 	return ErrorCode::OK;
 }
 

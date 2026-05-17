@@ -2,8 +2,10 @@
 #include <CppUnitTest.h>
 
 #include <cstdint>
+#include <filesystem>
 #include <utility>
 #include <vector>
+#include <Windows.h>
 
 #include "../source/common/AssetSuite.h"
 #include "../source/common/AssetSuiteContext.h"
@@ -12,8 +14,84 @@
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
+namespace
+{
+	std::filesystem::path GetLoadedModuleDirectory()
+	{
+		HMODULE module = nullptr;
+		if (!GetModuleHandleExW(
+			GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+			reinterpret_cast<LPCWSTR>(&GetLoadedModuleDirectory),
+			&module))
+		{
+			return {};
+		}
+
+		wchar_t modulePath[MAX_PATH] = {};
+		if (GetModuleFileNameW(module, modulePath, MAX_PATH) == 0)
+		{
+			return {};
+		}
+
+		return std::filesystem::path(modulePath).parent_path();
+	}
+
+	bool ContainsTestAssets(const std::filesystem::path& directory)
+	{
+		return !directory.empty() && std::filesystem::exists(directory / "test_file.xyz");
+	}
+
+	std::filesystem::path FindTestAssetDirectory()
+	{
+		const std::filesystem::path moduleDirectory = GetLoadedModuleDirectory();
+		const std::filesystem::path currentDirectory = std::filesystem::current_path();
+		const std::filesystem::path sourceDirectory = std::filesystem::path(__FILE__).parent_path();
+
+		const std::filesystem::path candidates[] = {
+			currentDirectory,
+			moduleDirectory,
+			currentDirectory / "test_images",
+			moduleDirectory / "test_images",
+			sourceDirectory.parent_path() / "test_images"
+		};
+
+		for (const auto& candidate : candidates)
+		{
+			if (ContainsTestAssets(candidate))
+			{
+				return candidate;
+			}
+		}
+
+		for (std::filesystem::path cursor = currentDirectory; !cursor.empty(); cursor = cursor.parent_path())
+		{
+			if (ContainsTestAssets(cursor))
+			{
+				return cursor;
+			}
+
+			if (ContainsTestAssets(cursor / "test_images"))
+			{
+				return cursor / "test_images";
+			}
+
+			if (cursor == cursor.parent_path())
+			{
+				break;
+			}
+		}
+
+		return currentDirectory;
+	}
+}
+
 namespace GeneralUnitTests
 {
+	TEST_MODULE_INITIALIZE(ModuleInitialize)
+	{
+		std::filesystem::current_path(FindTestAssetDirectory());
+	}
+
 	TEST_CLASS(RuntimeBlobTests)
 	{
 	public:
@@ -93,6 +171,7 @@ namespace GeneralUnitTests
 			AssertResultString(AssetSuite::Result::ErrorOutOfMemory, "Error: out of memory");
 			AssertResultString(AssetSuite::Result::ErrorInvalidContext, "Error: invalid context");
 			AssertResultString(AssetSuite::Result::ErrorInvalidHandle, "Error: invalid handle");
+			AssertResultString(AssetSuite::Result::ErrorIoFailure, "Error: IO failure");
 			AssertResultString(AssetSuite::Result::ErrorUnknown, "Error: unknown");
 		}
 
@@ -408,6 +487,55 @@ namespace GeneralUnitTests
 			DestroyContextForCleanup(context);
 		}
 
+		TEST_METHOD(LoadFileReturnsIoFailureForExistingNonFilePath)
+		{
+			AssetSuite::ContextHandle context = nullptr;
+			AssetSuite::BlobHandle blob = nullptr;
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+
+			const auto result = AssetSuite::LoadFile(context, std::filesystem::current_path().string().c_str(), &blob);
+
+			Assert::AreEqual(true, AssetSuite::Result::ErrorIoFailure == result);
+			Assert::IsNull(blob);
+			Assert::AreEqual(static_cast<size_t>(0), context->Runtime().BlobStorage().LiveCount());
+
+			DestroyContextForCleanup(context);
+		}
+
+		TEST_METHOD(RuntimeFileLoaderPreservesOutputOnIoFailure)
+		{
+			AssetSuite::ContextHandle context = nullptr;
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+			std::vector<uint8_t> bytes = { 0xAB, 0xCD };
+
+			const auto result = context->Runtime().FileLoader().LoadToMemory(std::filesystem::current_path(), true, bytes);
+
+			Assert::AreEqual(true, AssetSuite::ErrorCode::IoFailure == result);
+			Assert::AreEqual(static_cast<size_t>(2), bytes.size());
+			Assert::AreEqual(static_cast<uint8_t>(0xAB), bytes[0]);
+			Assert::AreEqual(static_cast<uint8_t>(0xCD), bytes[1]);
+
+			DestroyContextForCleanup(context);
+		}
+
+		TEST_METHOD(RuntimeFileLoaderAddsTerminatorForTextLoads)
+		{
+			AssetSuite::ContextHandle context = nullptr;
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+			std::vector<uint8_t> textBytes;
+			std::vector<uint8_t> binaryBytes;
+
+			const auto textResult = context->Runtime().FileLoader().LoadToMemory("test_mesh.obj", false, textBytes);
+			const auto binaryResult = context->Runtime().FileLoader().LoadToMemory("test_mesh.obj", true, binaryBytes);
+
+			Assert::AreEqual(true, AssetSuite::ErrorCode::OK == textResult);
+			Assert::AreEqual(true, AssetSuite::ErrorCode::OK == binaryResult);
+			Assert::AreEqual(binaryBytes.size() + 1, textBytes.size());
+			Assert::AreEqual(static_cast<uint8_t>('\0'), textBytes.back());
+
+			DestroyContextForCleanup(context);
+		}
+
 		TEST_METHOD(ReleaseBlobClearsHandleAndInvalidatesStorage)
 		{
 			AssetSuite::ContextHandle context = nullptr;
@@ -597,6 +725,29 @@ namespace GeneralUnitTests
 			Assert::AreEqual(true, AssetSuite::ErrorCode::FileTypeNotSupported == error);
 		}
 
+		TEST_METHOD(ImageOpeningNonExistingFile)
+		{
+			AssetSuite::Manager manager;
+
+			auto error = manager.ImageLoad("non-existing-image.bmp");
+
+			Assert::AreEqual(true, AssetSuite::ErrorCode::NonExistingFile == error);
+		}
+
+		TEST_METHOD(ImageFailedLoadClearsPreviousRawBuffer)
+		{
+			AssetSuite::Manager manager;
+
+			auto error = manager.ImageLoad("test_file.xyz");
+			Assert::AreEqual(true, AssetSuite::ErrorCode::OK == error);
+
+			error = manager.ImageLoad("non-existing-image.bmp");
+			Assert::AreEqual(true, AssetSuite::ErrorCode::NonExistingFile == error);
+
+			error = manager.ImageDecode(AssetSuite::ImageDecoders::Auto);
+			Assert::AreEqual(true, AssetSuite::ErrorCode::RawBufferIsEmpty == error);
+		}
+
 		TEST_METHOD(RawBufferIsEmpty)
 		{
 			// In this test we don't need real data
@@ -629,6 +780,20 @@ namespace GeneralUnitTests
 
 			auto error = manager.MeshLoad("non-existing-mesh.obj");
 			Assert::AreEqual(true, AssetSuite::ErrorCode::NonExistingFile == error);
+		}
+
+		TEST_METHOD(FailedMeshLoadClearsPreviousRawBuffer)
+		{
+			AssetSuite::Manager manager;
+
+			auto error = manager.MeshLoad("test_mesh.obj");
+			Assert::AreEqual(true, AssetSuite::ErrorCode::OK == error);
+
+			error = manager.MeshLoad("non-existing-mesh.obj");
+			Assert::AreEqual(true, AssetSuite::ErrorCode::NonExistingFile == error);
+
+			error = manager.MeshDecode(AssetSuite::MeshDecoders::Auto);
+			Assert::AreEqual(true, AssetSuite::ErrorCode::RawBufferIsEmpty == error);
 		}
 
 		TEST_METHOD(FileTypeNotSupported)
