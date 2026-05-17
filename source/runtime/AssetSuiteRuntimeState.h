@@ -8,6 +8,8 @@
 #include <vector>
 #include <Windows.h>
 
+#include "AssetSuiteBlob.h"
+
 #include "../common/ImageDescriptor.h"
 #include "../common/ImageDecoder.h"
 #include "../common/MeshDecoder.h"
@@ -58,6 +60,18 @@ namespace AssetSuite::Internal
 		struct FileLoader
 		{
 			ErrorCode LoadToMemory(const std::filesystem::path& fileName, bool isBinary, std::vector<BYTE>& output) const;
+		};
+
+		struct BlobStorage
+		{
+			BlobHandle Create(Blob blob);
+			bool Owns(BlobHandle blob) const noexcept;
+			bool IsLive(BlobHandle blob) const noexcept;
+			Result Release(BlobHandle* blob) noexcept;
+			size_t LiveCount() const noexcept;
+
+		private:
+			std::vector<std::unique_ptr<AssetSuiteBlob_t>> blobs;
 		};
 
 		struct CodecRegistry
@@ -126,6 +140,7 @@ namespace AssetSuite::Internal
 		AllocatorPolicy allocatorPolicy;
 		Diagnostics diagnostics;
 		FileLoader fileLoader;
+		BlobStorage blobStorage;
 		CodecRegistry codecRegistry;
 	};
 }

@@ -8,6 +8,7 @@
 
 #include <fstream>
 #include <new>
+#include <utility>
 
 AssetSuite::Internal::RuntimeState::RuntimeState()
 	: codecs()
@@ -113,6 +114,58 @@ AssetSuite::ErrorCode AssetSuite::Internal::RuntimeState::FileLoader::LoadToMemo
 	}
 
 	return ErrorCode::OK;
+}
+
+AssetSuite::BlobHandle AssetSuite::Internal::RuntimeState::BlobStorage::Create(Blob blob)
+{
+	auto storedBlob = std::make_unique<AssetSuiteBlob_t>(std::move(blob));
+	BlobHandle handle = storedBlob.get();
+	blobs.push_back(std::move(storedBlob));
+	return handle;
+}
+
+bool AssetSuite::Internal::RuntimeState::BlobStorage::Owns(BlobHandle blob) const noexcept
+{
+	for (const auto& storedBlob : blobs)
+	{
+		if (storedBlob.get() == blob)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool AssetSuite::Internal::RuntimeState::BlobStorage::IsLive(BlobHandle blob) const noexcept
+{
+	return Owns(blob) && blob->IsLive();
+}
+
+AssetSuite::Result AssetSuite::Internal::RuntimeState::BlobStorage::Release(BlobHandle* blob) noexcept
+{
+	if (!blob || !*blob || !IsLive(*blob))
+	{
+		return Result::ErrorInvalidHandle;
+	}
+
+	(*blob)->Release();
+	*blob = nullptr;
+	return Result::Success;
+}
+
+size_t AssetSuite::Internal::RuntimeState::BlobStorage::LiveCount() const noexcept
+{
+	size_t count = 0;
+	for (const auto& storedBlob : blobs)
+	{
+		if (storedBlob->IsLive())
+		{
+			++count;
+		}
+	}
+
+	return count;
 }
 
 bool AssetSuite::Internal::RuntimeState::CodecRegistry::RegisterImageDecoder(

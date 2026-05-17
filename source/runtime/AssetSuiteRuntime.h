@@ -23,6 +23,8 @@ namespace AssetSuite::Internal
 		RuntimeState::Diagnostics& Diagnostics() noexcept;
 		const RuntimeState::Diagnostics& Diagnostics() const noexcept;
 		RuntimeState::FileLoader& FileLoader() noexcept;
+		RuntimeState::BlobStorage& BlobStorage() noexcept;
+		const RuntimeState::BlobStorage& BlobStorage() const noexcept;
 		RuntimeState::CodecRegistry& CodecRegistry() noexcept;
 		const RuntimeState::CodecRegistry& CodecRegistry() const noexcept;
 

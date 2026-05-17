@@ -93,3 +93,13 @@ const AssetSuite::Internal::Blob& AssetSuite::AssetSuiteBlob_t::Blob() const noe
 {
 	return *blob;
 }
+
+bool AssetSuite::AssetSuiteBlob_t::IsLive() const noexcept
+{
+	return blob != nullptr;
+}
+
+void AssetSuite::AssetSuiteBlob_t::Release() noexcept
+{
+	blob.reset();
+}

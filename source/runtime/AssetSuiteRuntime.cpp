@@ -49,6 +49,18 @@ AssetSuite::Internal::RuntimeContext::FileLoader() noexcept
 	return state.fileLoader;
 }
 
+AssetSuite::Internal::RuntimeState::BlobStorage&
+AssetSuite::Internal::RuntimeContext::BlobStorage() noexcept
+{
+	return state.blobStorage;
+}
+
+const AssetSuite::Internal::RuntimeState::BlobStorage&
+AssetSuite::Internal::RuntimeContext::BlobStorage() const noexcept
+{
+	return state.blobStorage;
+}
+
 AssetSuite::Internal::RuntimeState::CodecRegistry&
 AssetSuite::Internal::RuntimeContext::CodecRegistry() noexcept
 {

@@ -53,6 +53,8 @@ namespace AssetSuite
 
 		Internal::Blob& Blob() noexcept;
 		const Internal::Blob& Blob() const noexcept;
+		bool IsLive() const noexcept;
+		void Release() noexcept;
 
 	private:
 		std::unique_ptr<Internal::Blob> blob;
