@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <utility>
 #include <vector>
+#include <Windows.h>
 
 #include "../source/common/AssetSuite.h"
 #include "../source/common/AssetSuiteContext.h"
@@ -15,9 +16,72 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
 namespace
 {
-	std::filesystem::path GetTestAssetDirectory()
+	std::filesystem::path GetLoadedModuleDirectory()
 	{
-		return std::filesystem::path(__FILE__).parent_path().parent_path() / "test_images";
+		HMODULE module = nullptr;
+		if (!GetModuleHandleExW(
+			GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+			reinterpret_cast<LPCWSTR>(&GetLoadedModuleDirectory),
+			&module))
+		{
+			return {};
+		}
+
+		wchar_t modulePath[MAX_PATH] = {};
+		if (GetModuleFileNameW(module, modulePath, MAX_PATH) == 0)
+		{
+			return {};
+		}
+
+		return std::filesystem::path(modulePath).parent_path();
+	}
+
+	bool ContainsTestAssets(const std::filesystem::path& directory)
+	{
+		return !directory.empty() && std::filesystem::exists(directory / "test_file.xyz");
+	}
+
+	std::filesystem::path FindTestAssetDirectory()
+	{
+		const std::filesystem::path moduleDirectory = GetLoadedModuleDirectory();
+		const std::filesystem::path currentDirectory = std::filesystem::current_path();
+		const std::filesystem::path sourceDirectory = std::filesystem::path(__FILE__).parent_path();
+
+		const std::filesystem::path candidates[] = {
+			currentDirectory,
+			moduleDirectory,
+			currentDirectory / "test_images",
+			moduleDirectory / "test_images",
+			sourceDirectory.parent_path() / "test_images"
+		};
+
+		for (const auto& candidate : candidates)
+		{
+			if (ContainsTestAssets(candidate))
+			{
+				return candidate;
+			}
+		}
+
+		for (std::filesystem::path cursor = currentDirectory; !cursor.empty(); cursor = cursor.parent_path())
+		{
+			if (ContainsTestAssets(cursor))
+			{
+				return cursor;
+			}
+
+			if (ContainsTestAssets(cursor / "test_images"))
+			{
+				return cursor / "test_images";
+			}
+
+			if (cursor == cursor.parent_path())
+			{
+				break;
+			}
+		}
+
+		return currentDirectory;
 	}
 }
 
@@ -25,7 +89,7 @@ namespace GeneralUnitTests
 {
 	TEST_MODULE_INITIALIZE(ModuleInitialize)
 	{
-		std::filesystem::current_path(GetTestAssetDirectory());
+		std::filesystem::current_path(FindTestAssetDirectory());
 	}
 
 	TEST_CLASS(RuntimeBlobTests)
