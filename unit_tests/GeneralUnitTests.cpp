@@ -1,13 +1,66 @@
 #pragma warning (disable : 4251)
 #include <CppUnitTest.h>
+
+#include <cstdint>
+#include <utility>
+#include <vector>
+
 #include "../source/common/AssetSuite.h"
 #include "../source/common/AssetSuiteContext.h"
+#include "../source/runtime/AssetSuiteBlob.h"
 #include "../source/runtime/AssetSuiteRuntime.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
 namespace GeneralUnitTests
 {
+	TEST_CLASS(RuntimeBlobTests)
+	{
+	public:
+		TEST_METHOD(BlobStoresRawBytesAndMetadata)
+		{
+			std::vector<uint8_t> bytes = { 0x01, 0x02, 0x03, 0x04 };
+			const auto metadata = AssetSuite::Internal::MakeBlobSourceMetadata("textures/albedo.png");
+
+			AssetSuite::Internal::Blob blob(std::move(bytes), metadata);
+			const auto desc = blob.Describe();
+
+			Assert::AreEqual(static_cast<uint64_t>(4), blob.ByteSize());
+			Assert::IsNotNull(blob.Data());
+			Assert::AreEqual(static_cast<uint8_t>(0x01), blob.Data()[0]);
+			Assert::AreEqual(true, blob.SourceMetadata().sourcePath == "textures/albedo.png");
+			Assert::AreEqual(true, blob.SourceMetadata().extension == ".png");
+			Assert::AreEqual(true, AssetSuite::AssetFormat::PNG == blob.SourceMetadata().format);
+			Assert::AreEqual(static_cast<uint32_t>(sizeof(AssetSuite::BlobDesc)), desc.structSize);
+			Assert::AreEqual(static_cast<uint64_t>(4), desc.byteSize);
+			Assert::AreEqual(true, AssetSuite::AssetFormat::PNG == desc.format);
+			Assert::AreEqual(static_cast<uint32_t>(0), desc.flags);
+		}
+
+		TEST_METHOD(BlobMetadataUsesUnknownFormatForUnsupportedExtension)
+		{
+			const auto metadata = AssetSuite::Internal::MakeBlobSourceMetadata("data/source.asset");
+
+			Assert::AreEqual(true, metadata.sourcePath == "data/source.asset");
+			Assert::AreEqual(true, metadata.extension == ".asset");
+			Assert::AreEqual(true, AssetSuite::AssetFormat::Unknown == metadata.format);
+		}
+
+		TEST_METHOD(BlobHandleBridgeOwnsPrivateBlobRepresentation)
+		{
+			std::vector<uint8_t> bytes = { 0x0a, 0x0b };
+			AssetSuite::Internal::Blob blob(
+				std::move(bytes),
+				AssetSuite::Internal::MakeBlobSourceMetadata("meshes/cube.obj"));
+
+			AssetSuite::AssetSuiteBlob_t handle(std::move(blob));
+
+			Assert::AreEqual(static_cast<uint64_t>(2), handle.Blob().ByteSize());
+			Assert::AreEqual(static_cast<uint8_t>(0x0b), handle.Blob().Data()[1]);
+			Assert::AreEqual(true, AssetSuite::AssetFormat::WavefrontObj == handle.Blob().SourceMetadata().format);
+		}
+	};
+
 	TEST_CLASS(PublicApiTests)
 	{
 	public:

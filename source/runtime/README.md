@@ -11,6 +11,7 @@ The runtime currently owns:
 - allocator policy placeholders
 - diagnostics storage
 - file loading support
+- private blob representations for raw asset bytes and copied source metadata
 - source file metadata
 - raw, decoded, and formatted buffers
 - transient image and mesh metadata
@@ -31,11 +32,17 @@ Runtime headers under `source/runtime` are private implementation files. They mu
 
 The public SDK surface is guarded by `PublicHeaderCompile`, `PublicHeaderHygiene.ps1`, and `AssertPublicInstallSurface.ps1`. These checks reject private runtime names in public headers and verify that the installed include tree contains only `AssetSuite/*.h`.
 
+## Blob Representation
+
+`Internal::Blob` stores raw asset bytes in runtime-owned memory and copies minimal source metadata into the runtime object. The metadata currently tracks the original source path, source extension, and best-known public `AssetFormat` derived from the extension when possible.
+
+`AssetSuiteBlob_t` is the private bridge behind `BlobHandle`. It owns one `Internal::Blob` and remains outside the installed SDK headers.
+
 ## Deferred Scope
 
 This runtime layer is intentionally foundational. The following work is deferred to later stories:
 
-- blob creation and lifetime ownership
+- blob registry storage and validated lifetime ownership
 - image and mesh child-handle tracking
 - shared file loading APIs
 - codec probing and richer format detection
