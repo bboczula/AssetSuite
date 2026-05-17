@@ -59,7 +59,7 @@ namespace AssetSuite::Internal
 
 		struct FileLoader
 		{
-			ErrorCode LoadToMemory(const std::filesystem::path& fileName, bool isBinary, std::vector<BYTE>& output) const;
+			ErrorCode LoadToMemory(const std::filesystem::path& fileName, bool isBinary, std::vector<uint8_t>& output) const;
 		};
 
 		struct BlobStorage
@@ -67,11 +67,20 @@ namespace AssetSuite::Internal
 			BlobHandle Create(Blob blob);
 			bool Owns(BlobHandle blob) const noexcept;
 			bool IsLive(BlobHandle blob) const noexcept;
+			const Blob* Get(BlobHandle blob) const noexcept;
 			Result Release(BlobHandle* blob) noexcept;
 			size_t LiveCount() const noexcept;
+			size_t SlotCapacity() const noexcept;
 
 		private:
-			std::vector<std::unique_ptr<AssetSuiteBlob_t>> blobs;
+			struct Slot
+			{
+				std::unique_ptr<Blob> blob;
+				uint32_t generation = 1;
+			};
+
+			std::vector<Slot> slots;
+			std::vector<size_t> freeSlots;
 		};
 
 		struct CodecRegistry
@@ -133,7 +142,7 @@ namespace AssetSuite::Internal
 		FileInfo fileInfo;
 		ImageInfo imageInfo;
 		MeshInfo meshInfo;
-		std::vector<BYTE> rawBuffer;
+		std::vector<uint8_t> rawBuffer;
 		std::vector<BYTE> decodedBuffer;
 		std::vector<BYTE> formattedBuffer;
 		CodecStorage codecs;

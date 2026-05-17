@@ -8,7 +8,47 @@
 
 #include <fstream>
 #include <new>
+#include <cstdint>
 #include <utility>
+
+namespace
+{
+	constexpr uintptr_t SLOT_INDEX_MASK = 0xffffffffu;
+	constexpr uint32_t INITIAL_BLOB_GENERATION = 1;
+
+	AssetSuite::BlobHandle EncodeBlobHandle(size_t slotIndex, uint32_t generation) noexcept
+	{
+		const uintptr_t token =
+			(static_cast<uintptr_t>(generation) << 32) |
+			(static_cast<uintptr_t>(slotIndex) + 1u);
+		return reinterpret_cast<AssetSuite::BlobHandle>(token);
+	}
+
+	bool DecodeBlobHandle(AssetSuite::BlobHandle handle, size_t& slotIndex, uint32_t& generation) noexcept
+	{
+		const uintptr_t token = reinterpret_cast<uintptr_t>(handle);
+		const uintptr_t encodedSlotIndex = token & SLOT_INDEX_MASK;
+		if (encodedSlotIndex == 0)
+		{
+			return false;
+		}
+
+		generation = static_cast<uint32_t>(token >> 32);
+		if (generation == 0)
+		{
+			return false;
+		}
+
+		slotIndex = static_cast<size_t>(encodedSlotIndex - 1u);
+		return true;
+	}
+
+	uint32_t NextBlobGeneration(uint32_t generation) noexcept
+	{
+		++generation;
+		return generation == 0 ? INITIAL_BLOB_GENERATION : generation;
+	}
+}
 
 AssetSuite::Internal::RuntimeState::RuntimeState()
 	: codecs()
@@ -81,7 +121,7 @@ AssetSuite::Internal::RuntimeState::Diagnostics::Entries() const noexcept
 AssetSuite::ErrorCode AssetSuite::Internal::RuntimeState::FileLoader::LoadToMemory(
 	const std::filesystem::path& fileName,
 	bool isBinary,
-	std::vector<BYTE>& output) const
+	std::vector<uint8_t>& output) const
 {
 	if (!std::filesystem::exists(fileName))
 	{
@@ -118,38 +158,79 @@ AssetSuite::ErrorCode AssetSuite::Internal::RuntimeState::FileLoader::LoadToMemo
 
 AssetSuite::BlobHandle AssetSuite::Internal::RuntimeState::BlobStorage::Create(Blob blob)
 {
-	auto storedBlob = std::make_unique<AssetSuiteBlob_t>(std::move(blob));
-	BlobHandle handle = storedBlob.get();
-	blobs.push_back(std::move(storedBlob));
-	return handle;
+	size_t slotIndex = 0;
+	if (!freeSlots.empty())
+	{
+		slotIndex = freeSlots.back();
+		freeSlots.pop_back();
+	}
+	else
+	{
+		slotIndex = slots.size();
+		slots.push_back({ nullptr, INITIAL_BLOB_GENERATION });
+	}
+
+	slots[slotIndex].blob = std::make_unique<Blob>(std::move(blob));
+	return EncodeBlobHandle(slotIndex, slots[slotIndex].generation);
 }
 
 bool AssetSuite::Internal::RuntimeState::BlobStorage::Owns(BlobHandle blob) const noexcept
 {
-	for (const auto& storedBlob : blobs)
-	{
-		if (storedBlob.get() == blob)
-		{
-			return true;
-		}
-	}
-
-	return false;
+	return Get(blob) != nullptr;
 }
 
 bool AssetSuite::Internal::RuntimeState::BlobStorage::IsLive(BlobHandle blob) const noexcept
 {
-	return Owns(blob) && blob->IsLive();
+	return Get(blob) != nullptr;
+}
+
+const AssetSuite::Internal::Blob*
+AssetSuite::Internal::RuntimeState::BlobStorage::Get(BlobHandle blob) const noexcept
+{
+	size_t slotIndex = 0;
+	uint32_t generation = 0;
+	if (!DecodeBlobHandle(blob, slotIndex, generation))
+	{
+		return nullptr;
+	}
+
+	if (slotIndex >= slots.size())
+	{
+		return nullptr;
+	}
+
+	const Slot& slot = slots[slotIndex];
+	if (slot.generation != generation || !slot.blob)
+	{
+		return nullptr;
+	}
+
+	return slot.blob.get();
 }
 
 AssetSuite::Result AssetSuite::Internal::RuntimeState::BlobStorage::Release(BlobHandle* blob) noexcept
 {
-	if (!blob || !*blob || !IsLive(*blob))
+	size_t slotIndex = 0;
+	uint32_t generation = 0;
+	if (!blob || !DecodeBlobHandle(*blob, slotIndex, generation))
 	{
 		return Result::ErrorInvalidHandle;
 	}
 
-	(*blob)->Release();
+	if (slotIndex >= slots.size())
+	{
+		return Result::ErrorInvalidHandle;
+	}
+
+	Slot& slot = slots[slotIndex];
+	if (slot.generation != generation || !slot.blob)
+	{
+		return Result::ErrorInvalidHandle;
+	}
+
+	slot.blob.reset();
+	slot.generation = NextBlobGeneration(slot.generation);
+	freeSlots.push_back(slotIndex);
 	*blob = nullptr;
 	return Result::Success;
 }
@@ -157,15 +238,20 @@ AssetSuite::Result AssetSuite::Internal::RuntimeState::BlobStorage::Release(Blob
 size_t AssetSuite::Internal::RuntimeState::BlobStorage::LiveCount() const noexcept
 {
 	size_t count = 0;
-	for (const auto& storedBlob : blobs)
+	for (const auto& slot : slots)
 	{
-		if (storedBlob->IsLive())
+		if (slot.blob)
 		{
 			++count;
 		}
 	}
 
 	return count;
+}
+
+size_t AssetSuite::Internal::RuntimeState::BlobStorage::SlotCapacity() const noexcept
+{
+	return slots.size();
 }
 
 bool AssetSuite::Internal::RuntimeState::CodecRegistry::RegisterImageDecoder(

@@ -6,7 +6,6 @@
 
 #include <cstdint>
 #include <filesystem>
-#include <memory>
 #include <vector>
 
 namespace AssetSuite::Internal
@@ -45,18 +44,5 @@ namespace AssetSuite
 {
 	struct AssetSuiteBlob_t
 	{
-		explicit AssetSuiteBlob_t(Internal::Blob blob);
-		~AssetSuiteBlob_t();
-
-		AssetSuiteBlob_t(const AssetSuiteBlob_t&) = delete;
-		AssetSuiteBlob_t& operator=(const AssetSuiteBlob_t&) = delete;
-
-		Internal::Blob& Blob() noexcept;
-		const Internal::Blob& Blob() const noexcept;
-		bool IsLive() const noexcept;
-		void Release() noexcept;
-
-	private:
-		std::unique_ptr<Internal::Blob> blob;
 	};
 }

@@ -152,7 +152,7 @@ AssetSuite::Result AssetSuite::LoadFile(ContextHandle context, const char* fileP
 		return Result::ErrorInvalidArgument;
 	}
 
-	std::vector<BYTE> rawBytes;
+	std::vector<uint8_t> rawBytes;
 	const ErrorCode loadResult = context->Runtime().FileLoader().LoadToMemory(filePath, true, rawBytes);
 	const Result mappedResult = MapFileLoadResult(loadResult);
 	if (mappedResult != Result::Success)
@@ -163,8 +163,7 @@ AssetSuite::Result AssetSuite::LoadFile(ContextHandle context, const char* fileP
 
 	try
 	{
-		std::vector<uint8_t> bytes(rawBytes.begin(), rawBytes.end());
-		Internal::Blob blob(std::move(bytes), Internal::MakeBlobSourceMetadata(filePath));
+		Internal::Blob blob(std::move(rawBytes), Internal::MakeBlobSourceMetadata(filePath));
 		*outBlob = context->Runtime().BlobStorage().Create(std::move(blob));
 	}
 	catch (const std::bad_alloc&)

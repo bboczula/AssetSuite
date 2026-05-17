@@ -1,27 +1,40 @@
 #include "AssetSuiteBlob.h"
 
+#include <algorithm>
+#include <cctype>
+#include <string>
 #include <utility>
 
 namespace
 {
 	AssetSuite::AssetFormat ResolveBlobFormat(const std::filesystem::path& extension) noexcept
 	{
-		if (extension == ".bmp")
+		std::string normalizedExtension = extension.string();
+		std::transform(
+			normalizedExtension.begin(),
+			normalizedExtension.end(),
+			normalizedExtension.begin(),
+			[](unsigned char character)
+			{
+				return static_cast<char>(std::tolower(character));
+			});
+
+		if (normalizedExtension == ".bmp")
 		{
 			return AssetSuite::AssetFormat::BMP;
 		}
 
-		if (extension == ".png")
+		if (normalizedExtension == ".png")
 		{
 			return AssetSuite::AssetFormat::PNG;
 		}
 
-		if (extension == ".ppm")
+		if (normalizedExtension == ".ppm")
 		{
 			return AssetSuite::AssetFormat::PPM;
 		}
 
-		if (extension == ".obj")
+		if (normalizedExtension == ".obj")
 		{
 			return AssetSuite::AssetFormat::WavefrontObj;
 		}
@@ -75,31 +88,4 @@ AssetSuite::Internal::MakeBlobSourceMetadata(const std::filesystem::path& source
 	metadata.extension = sourcePath.extension();
 	metadata.format = ResolveBlobFormat(metadata.extension);
 	return metadata;
-}
-
-AssetSuite::AssetSuiteBlob_t::AssetSuiteBlob_t(Internal::Blob blob)
-	: blob(std::make_unique<Internal::Blob>(std::move(blob)))
-{
-}
-
-AssetSuite::AssetSuiteBlob_t::~AssetSuiteBlob_t() = default;
-
-AssetSuite::Internal::Blob& AssetSuite::AssetSuiteBlob_t::Blob() noexcept
-{
-	return *blob;
-}
-
-const AssetSuite::Internal::Blob& AssetSuite::AssetSuiteBlob_t::Blob() const noexcept
-{
-	return *blob;
-}
-
-bool AssetSuite::AssetSuiteBlob_t::IsLive() const noexcept
-{
-	return blob != nullptr;
-}
-
-void AssetSuite::AssetSuiteBlob_t::Release() noexcept
-{
-	blob.reset();
 }
