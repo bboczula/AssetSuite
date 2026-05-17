@@ -458,19 +458,23 @@ namespace GeneralUnitTests
 		{
 			AssetSuite::ContextHandle firstContext = nullptr;
 			AssetSuite::ContextHandle secondContext = nullptr;
-			AssetSuite::BlobHandle blob = nullptr;
+			AssetSuite::BlobHandle firstBlob = nullptr;
+			AssetSuite::BlobHandle secondBlob = nullptr;
 			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &firstContext));
 			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &secondContext));
-			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::LoadFile(firstContext, "test_file.xyz", &blob));
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::LoadFile(firstContext, "test_file.xyz", &firstBlob));
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::LoadFile(secondContext, "test_file.xyz", &secondBlob));
+			Assert::IsFalse(firstBlob == secondBlob);
 
-			const auto result = AssetSuite::ReleaseBlob(secondContext, &blob);
+			const auto result = AssetSuite::ReleaseBlob(secondContext, &firstBlob);
 
 			Assert::AreEqual(true, AssetSuite::Result::ErrorInvalidHandle == result);
-			Assert::IsNotNull(blob);
+			Assert::IsNotNull(firstBlob);
 			Assert::AreEqual(static_cast<size_t>(1), firstContext->Runtime().BlobStorage().LiveCount());
-			Assert::AreEqual(static_cast<size_t>(0), secondContext->Runtime().BlobStorage().LiveCount());
+			Assert::AreEqual(static_cast<size_t>(1), secondContext->Runtime().BlobStorage().LiveCount());
 
-			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::ReleaseBlob(firstContext, &blob));
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::ReleaseBlob(secondContext, &secondBlob));
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::ReleaseBlob(firstContext, &firstBlob));
 			DestroyContextForCleanup(secondContext);
 			DestroyContextForCleanup(firstContext);
 		}

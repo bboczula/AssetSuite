@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <cstdint>
 #include <cstddef>
 #include <filesystem>
 #include <memory>
@@ -64,6 +65,8 @@ namespace AssetSuite::Internal
 
 		struct BlobStorage
 		{
+			BlobStorage();
+
 			BlobHandle Create(Blob blob);
 			bool Owns(BlobHandle blob) const noexcept;
 			bool IsLive(BlobHandle blob) const noexcept;
@@ -79,6 +82,7 @@ namespace AssetSuite::Internal
 				uint32_t generation = 1;
 			};
 
+			uint32_t contextId = 0;
 			std::vector<Slot> slots;
 			std::vector<size_t> freeSlots;
 		};

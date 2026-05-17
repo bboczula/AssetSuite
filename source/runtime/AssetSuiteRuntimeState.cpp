@@ -8,23 +8,44 @@
 
 #include <fstream>
 #include <new>
+#include <atomic>
 #include <cstdint>
 #include <utility>
 
 namespace
 {
-	constexpr uintptr_t SLOT_INDEX_MASK = 0xffffffffu;
-	constexpr uint32_t INITIAL_BLOB_GENERATION = 1;
+	static_assert(sizeof(uintptr_t) >= 8, "BlobHandle token encoding requires a 64-bit target.");
 
-	AssetSuite::BlobHandle EncodeBlobHandle(size_t slotIndex, uint32_t generation) noexcept
+	constexpr uint32_t SLOT_INDEX_BITS = 24;
+	constexpr uint32_t GENERATION_BITS = 20;
+	constexpr uint32_t CONTEXT_ID_BITS = 20;
+	constexpr uintptr_t SLOT_INDEX_MASK = (uintptr_t{ 1 } << SLOT_INDEX_BITS) - 1u;
+	constexpr uintptr_t GENERATION_MASK = (uintptr_t{ 1 } << GENERATION_BITS) - 1u;
+	constexpr uintptr_t CONTEXT_ID_MASK = (uintptr_t{ 1 } << CONTEXT_ID_BITS) - 1u;
+	constexpr uint32_t INITIAL_BLOB_GENERATION = 1;
+	constexpr uint32_t INITIAL_BLOB_CONTEXT_ID = 1;
+
+	std::atomic<uint32_t> nextBlobContextId = INITIAL_BLOB_CONTEXT_ID;
+
+	AssetSuite::BlobHandle EncodeBlobHandle(size_t slotIndex, uint32_t generation, uint32_t contextId) noexcept
 	{
+		if (slotIndex >= SLOT_INDEX_MASK || generation == 0 || contextId == 0)
+		{
+			return nullptr;
+		}
+
 		const uintptr_t token =
-			(static_cast<uintptr_t>(generation) << 32) |
+			(static_cast<uintptr_t>(contextId) << (SLOT_INDEX_BITS + GENERATION_BITS)) |
+			(static_cast<uintptr_t>(generation) << SLOT_INDEX_BITS) |
 			(static_cast<uintptr_t>(slotIndex) + 1u);
 		return reinterpret_cast<AssetSuite::BlobHandle>(token);
 	}
 
-	bool DecodeBlobHandle(AssetSuite::BlobHandle handle, size_t& slotIndex, uint32_t& generation) noexcept
+	bool DecodeBlobHandle(
+		AssetSuite::BlobHandle handle,
+		size_t& slotIndex,
+		uint32_t& generation,
+		uint32_t& contextId) noexcept
 	{
 		const uintptr_t token = reinterpret_cast<uintptr_t>(handle);
 		const uintptr_t encodedSlotIndex = token & SLOT_INDEX_MASK;
@@ -33,8 +54,9 @@ namespace
 			return false;
 		}
 
-		generation = static_cast<uint32_t>(token >> 32);
-		if (generation == 0)
+		generation = static_cast<uint32_t>((token >> SLOT_INDEX_BITS) & GENERATION_MASK);
+		contextId = static_cast<uint32_t>((token >> (SLOT_INDEX_BITS + GENERATION_BITS)) & CONTEXT_ID_MASK);
+		if (generation == 0 || contextId == 0)
 		{
 			return false;
 		}
@@ -43,9 +65,15 @@ namespace
 		return true;
 	}
 
+	uint32_t AllocateBlobContextId() noexcept
+	{
+		uint32_t contextId = nextBlobContextId.fetch_add(1, std::memory_order_relaxed) & static_cast<uint32_t>(CONTEXT_ID_MASK);
+		return contextId == 0 ? INITIAL_BLOB_CONTEXT_ID : contextId;
+	}
+
 	uint32_t NextBlobGeneration(uint32_t generation) noexcept
 	{
-		++generation;
+		generation = (generation + 1u) & static_cast<uint32_t>(GENERATION_MASK);
 		return generation == 0 ? INITIAL_BLOB_GENERATION : generation;
 	}
 }
@@ -156,6 +184,11 @@ AssetSuite::ErrorCode AssetSuite::Internal::RuntimeState::FileLoader::LoadToMemo
 	return ErrorCode::OK;
 }
 
+AssetSuite::Internal::RuntimeState::BlobStorage::BlobStorage()
+	: contextId(AllocateBlobContextId())
+{
+}
+
 AssetSuite::BlobHandle AssetSuite::Internal::RuntimeState::BlobStorage::Create(Blob blob)
 {
 	size_t slotIndex = 0;
@@ -171,7 +204,7 @@ AssetSuite::BlobHandle AssetSuite::Internal::RuntimeState::BlobStorage::Create(B
 	}
 
 	slots[slotIndex].blob = std::make_unique<Blob>(std::move(blob));
-	return EncodeBlobHandle(slotIndex, slots[slotIndex].generation);
+	return EncodeBlobHandle(slotIndex, slots[slotIndex].generation, contextId);
 }
 
 bool AssetSuite::Internal::RuntimeState::BlobStorage::Owns(BlobHandle blob) const noexcept
@@ -189,7 +222,13 @@ AssetSuite::Internal::RuntimeState::BlobStorage::Get(BlobHandle blob) const noex
 {
 	size_t slotIndex = 0;
 	uint32_t generation = 0;
-	if (!DecodeBlobHandle(blob, slotIndex, generation))
+	uint32_t decodedContextId = 0;
+	if (!DecodeBlobHandle(blob, slotIndex, generation, decodedContextId))
+	{
+		return nullptr;
+	}
+
+	if (decodedContextId != contextId)
 	{
 		return nullptr;
 	}
@@ -212,7 +251,13 @@ AssetSuite::Result AssetSuite::Internal::RuntimeState::BlobStorage::Release(Blob
 {
 	size_t slotIndex = 0;
 	uint32_t generation = 0;
-	if (!blob || !DecodeBlobHandle(*blob, slotIndex, generation))
+	uint32_t decodedContextId = 0;
+	if (!blob || !DecodeBlobHandle(*blob, slotIndex, generation, decodedContextId))
+	{
+		return Result::ErrorInvalidHandle;
+	}
+
+	if (decodedContextId != contextId)
 	{
 		return Result::ErrorInvalidHandle;
 	}

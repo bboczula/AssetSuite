@@ -36,9 +36,9 @@ The public SDK surface is guarded by `PublicHeaderCompile`, `PublicHeaderHygiene
 
 `Internal::Blob` stores raw asset bytes in runtime-owned memory and copies minimal source metadata into the runtime object. The metadata currently tracks the original source path, source extension, and best-known public `AssetFormat` derived from the extension when possible.
 
-`BlobHandle` is treated as an opaque slot/generation token by the runtime. The public type remains pointer-shaped for ABI opacity, but blob validation decodes the token and never dereferences the handle value directly.
+`BlobHandle` is treated as an opaque context/slot/generation token by the runtime. The public type remains pointer-shaped for ABI opacity, but blob validation decodes the token and never dereferences the handle value directly. This token encoding requires a 64-bit target and is guarded by a compile-time assertion.
 
-`RuntimeState::BlobStorage` owns reusable blob slots for one context. `ReleaseBlob` clears the blob payload, advances the slot generation, returns the slot to the free list, and nulls the caller's handle. Copied stale handles are rejected by generation mismatch, and handles from another context are rejected because each context validates against only its own slot table.
+`RuntimeState::BlobStorage` owns reusable blob slots for one context. `ReleaseBlob` clears the blob payload, advances the slot generation, returns the slot to the free list, and nulls the caller's handle. Copied stale handles are rejected by generation mismatch, and handles from another context are rejected by context-id mismatch before slot lookup.
 
 ## Deferred Scope
 
