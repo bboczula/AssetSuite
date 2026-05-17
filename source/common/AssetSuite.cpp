@@ -191,7 +191,7 @@ AssetSuite::Result AssetSuite::ReleaseBlob(ContextHandle context, BlobHandle* bl
 		return Result::ErrorInvalidHandle;
 	}
 
-	return Result::ErrorUnknown;
+	return context->Runtime().BlobStorage().Release(blob);
 }
 
 AssetSuite::Manager::Manager()
