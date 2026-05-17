@@ -5,7 +5,6 @@
 #include <filesystem>
 #include <utility>
 #include <vector>
-#include <Windows.h>
 
 #include "../source/common/AssetSuite.h"
 #include "../source/common/AssetSuiteContext.h"
@@ -16,17 +15,9 @@ using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
 namespace
 {
-	std::filesystem::path GetCurrentModuleDirectory()
+	std::filesystem::path GetTestAssetDirectory()
 	{
-		HMODULE module = nullptr;
-		GetModuleHandleExW(
-			GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-			reinterpret_cast<LPCWSTR>(&GetCurrentModuleDirectory),
-			&module);
-
-		wchar_t modulePath[MAX_PATH] = {};
-		GetModuleFileNameW(module, modulePath, MAX_PATH);
-		return std::filesystem::path(modulePath).parent_path();
+		return std::filesystem::path(__FILE__).parent_path().parent_path() / "test_images";
 	}
 }
 
@@ -34,7 +25,7 @@ namespace GeneralUnitTests
 {
 	TEST_MODULE_INITIALIZE(ModuleInitialize)
 	{
-		std::filesystem::current_path(GetCurrentModuleDirectory());
+		std::filesystem::current_path(GetTestAssetDirectory());
 	}
 
 	TEST_CLASS(RuntimeBlobTests)
