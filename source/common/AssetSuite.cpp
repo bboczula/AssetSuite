@@ -11,6 +11,7 @@
 #include "../ppm/PpmEncoder.h"
 #include "../bypass/BypassEncoder.h"
 
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <new>
@@ -53,6 +54,24 @@ namespace
 		default:
 			return AssetSuite::Result::ErrorUnknown;
 		}
+	}
+
+	AssetSuite::ErrorCode LoadRuntimeFileToMemory(
+		AssetSuite::Internal::RuntimeContext& runtime,
+		const std::filesystem::path& filePath,
+		bool isBinary,
+		std::vector<uint8_t>& output)
+	{
+		return runtime.FileLoader().LoadToMemory(filePath, isBinary, output);
+	}
+
+	AssetSuite::ErrorCode LoadRuntimeFileToMemory(
+		AssetSuite::Internal::RuntimeState& runtimeState,
+		const std::filesystem::path& filePath,
+		bool isBinary,
+		std::vector<uint8_t>& output)
+	{
+		return runtimeState.fileLoader.LoadToMemory(filePath, isBinary, output);
 	}
 }
 
@@ -153,7 +172,7 @@ AssetSuite::Result AssetSuite::LoadFile(ContextHandle context, const char* fileP
 	}
 
 	std::vector<uint8_t> rawBytes;
-	const ErrorCode loadResult = context->Runtime().FileLoader().LoadToMemory(filePath, true, rawBytes);
+	const ErrorCode loadResult = LoadRuntimeFileToMemory(context->Runtime(), filePath, true, rawBytes);
 	const Result mappedResult = MapFileLoadResult(loadResult);
 	if (mappedResult != Result::Success)
 	{
@@ -462,7 +481,7 @@ void AssetSuite::Manager::StoreImageToFile(const std::string& filePathAndName, c
 AssetSuite::ErrorCode AssetSuite::Manager::LoadFileToMemory(const std::string& fileName, bool isBinary)
 {
       auto& state = State();
-      const ErrorCode result = state.fileLoader.LoadToMemory(fileName, isBinary, state.rawBuffer);
+      const ErrorCode result = ::LoadRuntimeFileToMemory(state, fileName, isBinary, state.rawBuffer);
       if (result != ErrorCode::OK)
       {
             state.diagnostics.Add(result, "Failed to load file into runtime memory.");
