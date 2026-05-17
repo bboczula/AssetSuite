@@ -51,7 +51,8 @@ namespace AssetSuite
 	// Passing a null context returns Result::ErrorInvalidContext. Passing a
 	// null filePath, null outBlob, or non-null *outBlob returns
 	// Result::ErrorInvalidArgument. Missing files return
-	// Result::ErrorFileNotFound.
+	// Result::ErrorFileNotFound. Existing files that cannot be opened or read
+	// return Result::ErrorIoFailure.
 	ASSET_SUITE_API Result LoadFile(ContextHandle context, const char* filePath, BlobHandle* outBlob);
 
 	// Releases a runtime-owned blob and sets the caller's handle to nullptr on

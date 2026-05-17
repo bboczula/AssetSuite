@@ -51,6 +51,8 @@ namespace
 			return AssetSuite::Result::Success;
 		case AssetSuite::ErrorCode::NonExistingFile:
 			return AssetSuite::Result::ErrorFileNotFound;
+		case AssetSuite::ErrorCode::IoFailure:
+			return AssetSuite::Result::ErrorIoFailure;
 		default:
 			return AssetSuite::Result::ErrorUnknown;
 		}
@@ -110,6 +112,8 @@ const char* AssetSuite::GetResultString(Result result)
 		return "Error: invalid context";
 	case Result::ErrorInvalidHandle:
 		return "Error: invalid handle";
+	case Result::ErrorIoFailure:
+		return "Error: IO failure";
 	case Result::ErrorUnknown:
 		return "Error: unknown";
 	default:
