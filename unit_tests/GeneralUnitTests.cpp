@@ -42,6 +42,7 @@ namespace GeneralUnitTests
 			AssertResultString(AssetSuite::Result::ErrorOutputBufferTooSmall, "Error: output buffer too small");
 			AssertResultString(AssetSuite::Result::ErrorOutOfMemory, "Error: out of memory");
 			AssertResultString(AssetSuite::Result::ErrorInvalidContext, "Error: invalid context");
+			AssertResultString(AssetSuite::Result::ErrorInvalidHandle, "Error: invalid handle");
 			AssertResultString(AssetSuite::Result::ErrorUnknown, "Error: unknown");
 		}
 

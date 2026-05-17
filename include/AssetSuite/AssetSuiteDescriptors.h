@@ -16,9 +16,14 @@ namespace AssetSuite
 
 	struct BlobDesc
 	{
+		// Must be exactly sizeof(BlobDesc) when a descriptor is supplied.
 		uint32_t structSize;
+		// Number of bytes owned by the blob.
 		uint64_t byteSize;
+		// Best-known asset format. May be Unknown when the source extension or
+		// signature does not identify a supported asset type.
 		AssetFormat format;
+		// Reserved for future use. Must be zero.
 		uint32_t flags;
 	};
 

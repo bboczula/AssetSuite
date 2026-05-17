@@ -76,6 +76,8 @@ const char* AssetSuite::GetResultString(Result result)
 		return "Error: out of memory";
 	case Result::ErrorInvalidContext:
 		return "Error: invalid context";
+	case Result::ErrorInvalidHandle:
+		return "Error: invalid handle";
 	case Result::ErrorUnknown:
 		return "Error: unknown";
 	default:
@@ -123,6 +125,36 @@ AssetSuite::Result AssetSuite::SetLoggingCallback(
 
 	context->Runtime().SetLoggingCallback(callback, minLevel, userData);
 	return Result::Success;
+}
+
+AssetSuite::Result AssetSuite::LoadFile(ContextHandle context, const char* filePath, BlobHandle* outBlob)
+{
+	if (!context)
+	{
+		return Result::ErrorInvalidContext;
+	}
+
+	if (!filePath || !outBlob || *outBlob)
+	{
+		return Result::ErrorInvalidArgument;
+	}
+
+	return Result::ErrorUnknown;
+}
+
+AssetSuite::Result AssetSuite::ReleaseBlob(ContextHandle context, BlobHandle* blob)
+{
+	if (!context)
+	{
+		return Result::ErrorInvalidContext;
+	}
+
+	if (!blob || !*blob)
+	{
+		return Result::ErrorInvalidHandle;
+	}
+
+	return Result::ErrorUnknown;
 }
 
 AssetSuite::Manager::Manager()

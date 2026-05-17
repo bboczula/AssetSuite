@@ -18,6 +18,7 @@ namespace AssetSuite
 		ErrorOutputBufferTooSmall = -5,
 		ErrorOutOfMemory = -6,
 		ErrorInvalidContext = -7,
+		ErrorInvalidHandle = -8,
 		ErrorUnknown = -1000
 	};
 
