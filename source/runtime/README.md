@@ -40,12 +40,17 @@ The public SDK surface is guarded by `PublicHeaderCompile`, `PublicHeaderHygiene
 
 `RuntimeState::BlobStorage` owns reusable blob slots for one context. `ReleaseBlob` clears the blob payload, advances the slot generation, returns the slot to the free list, and nulls the caller's handle. Copied stale handles are rejected by generation mismatch, and handles from another context are rejected by context-id mismatch before slot lookup.
 
+## File Loading
+
+`RuntimeState::FileLoader` is the shared file-read service for public blob loading and the legacy `Manager` image/mesh file entry points. Missing paths return `ErrorCode::NonExistingFile`, while existing paths that cannot be opened, sized, or fully read return `ErrorCode::IoFailure`.
+
+The public SDK adapter maps `NonExistingFile` to `Result::ErrorFileNotFound` and `IoFailure` to `Result::ErrorIoFailure`. Text-mode loads append a null terminator after successful reads; binary loads preserve the exact file bytes.
+
 ## Deferred Scope
 
 This runtime layer is intentionally foundational. The following work is deferred to later stories:
 
 - image and mesh child-handle tracking
-- shared file loading APIs
 - codec probing and richer format detection
 - public diagnostics reporting
 - allocator hooks wired into all internal allocations
