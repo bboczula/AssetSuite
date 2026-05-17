@@ -194,8 +194,9 @@ AssetSuite::ErrorCode AssetSuite::Internal::RuntimeState::FileLoader::LoadToMemo
 	}
 
 	const std::streamoff size = endPosition - beginPosition;
-	if (size > static_cast<std::streamoff>((std::numeric_limits<std::streamsize>::max)()) ||
-		size > static_cast<std::streamoff>((std::numeric_limits<size_t>::max)()))
+	const auto unsignedSize = static_cast<uintmax_t>(size);
+	if (unsignedSize > static_cast<uintmax_t>((std::numeric_limits<std::streamsize>::max)()) ||
+		unsignedSize > static_cast<uintmax_t>((std::numeric_limits<size_t>::max)()))
 	{
 		return ErrorCode::IoFailure;
 	}
