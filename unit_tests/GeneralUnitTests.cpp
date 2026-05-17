@@ -1,13 +1,63 @@
 #pragma warning (disable : 4251)
 #include <CppUnitTest.h>
+
+#include <cstdint>
+#include <utility>
+#include <vector>
+
 #include "../source/common/AssetSuite.h"
 #include "../source/common/AssetSuiteContext.h"
+#include "../source/runtime/AssetSuiteBlob.h"
 #include "../source/runtime/AssetSuiteRuntime.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
 namespace GeneralUnitTests
 {
+	TEST_CLASS(RuntimeBlobTests)
+	{
+	public:
+		TEST_METHOD(BlobStoresRawBytesAndMetadata)
+		{
+			std::vector<uint8_t> bytes = { 0x01, 0x02, 0x03, 0x04 };
+			const auto metadata = AssetSuite::Internal::MakeBlobSourceMetadata("textures/albedo.png");
+
+			AssetSuite::Internal::Blob blob(std::move(bytes), metadata);
+			const auto desc = blob.Describe();
+
+			Assert::AreEqual(static_cast<uint64_t>(4), blob.ByteSize());
+			Assert::IsNotNull(blob.Data());
+			Assert::AreEqual(static_cast<uint8_t>(0x01), blob.Data()[0]);
+			Assert::AreEqual(true, blob.SourceMetadata().sourcePath == "textures/albedo.png");
+			Assert::AreEqual(true, blob.SourceMetadata().extension == ".png");
+			Assert::AreEqual(true, AssetSuite::AssetFormat::PNG == blob.SourceMetadata().format);
+			Assert::AreEqual(static_cast<uint32_t>(sizeof(AssetSuite::BlobDesc)), desc.structSize);
+			Assert::AreEqual(static_cast<uint64_t>(4), desc.byteSize);
+			Assert::AreEqual(true, AssetSuite::AssetFormat::PNG == desc.format);
+			Assert::AreEqual(static_cast<uint32_t>(0), desc.flags);
+		}
+
+		TEST_METHOD(BlobMetadataUsesUnknownFormatForUnsupportedExtension)
+		{
+			const auto metadata = AssetSuite::Internal::MakeBlobSourceMetadata("data/source.asset");
+
+			Assert::AreEqual(true, metadata.sourcePath == "data/source.asset");
+			Assert::AreEqual(true, metadata.extension == ".asset");
+			Assert::AreEqual(true, AssetSuite::AssetFormat::Unknown == metadata.format);
+		}
+
+		TEST_METHOD(BlobMetadataNormalizesExtensionCase)
+		{
+			const auto pngMetadata = AssetSuite::Internal::MakeBlobSourceMetadata("textures/ALBEDO.PNG");
+			const auto objMetadata = AssetSuite::Internal::MakeBlobSourceMetadata("meshes/CUBE.OBJ");
+
+			Assert::AreEqual(true, pngMetadata.extension == ".PNG");
+			Assert::AreEqual(true, AssetSuite::AssetFormat::PNG == pngMetadata.format);
+			Assert::AreEqual(true, objMetadata.extension == ".OBJ");
+			Assert::AreEqual(true, AssetSuite::AssetFormat::WavefrontObj == objMetadata.format);
+		}
+	};
+
 	TEST_CLASS(PublicApiTests)
 	{
 	public:
@@ -42,6 +92,7 @@ namespace GeneralUnitTests
 			AssertResultString(AssetSuite::Result::ErrorOutputBufferTooSmall, "Error: output buffer too small");
 			AssertResultString(AssetSuite::Result::ErrorOutOfMemory, "Error: out of memory");
 			AssertResultString(AssetSuite::Result::ErrorInvalidContext, "Error: invalid context");
+			AssertResultString(AssetSuite::Result::ErrorInvalidHandle, "Error: invalid handle");
 			AssertResultString(AssetSuite::Result::ErrorUnknown, "Error: unknown");
 		}
 
@@ -290,6 +341,167 @@ namespace GeneralUnitTests
 			AssetSuite::DispatchLogEvent(context, AssetSuite::LogLevel::Fatal, "unregistered");
 
 			Assert::AreEqual(0, capture.callCount);
+
+			DestroyContextForCleanup(context);
+		}
+
+		TEST_METHOD(LoadFileCreatesRuntimeOwnedBlob)
+		{
+			AssetSuite::ContextHandle context = nullptr;
+			AssetSuite::BlobHandle blob = nullptr;
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+
+			const auto result = AssetSuite::LoadFile(context, "test_file.xyz", &blob);
+
+			Assert::AreEqual(true, AssetSuite::Result::Success == result);
+			Assert::IsNotNull(blob);
+			Assert::AreEqual(static_cast<size_t>(1), context->Runtime().BlobStorage().LiveCount());
+			const auto* storedBlob = context->Runtime().BlobStorage().Get(blob);
+			Assert::IsNotNull(storedBlob);
+			Assert::AreEqual(static_cast<uint64_t>(102), storedBlob->ByteSize());
+			Assert::AreEqual(true, AssetSuite::AssetFormat::Unknown == storedBlob->SourceMetadata().format);
+
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::ReleaseBlob(context, &blob));
+			DestroyContextForCleanup(context);
+		}
+
+		TEST_METHOD(LoadFileRejectsNullContext)
+		{
+			AssetSuite::BlobHandle blob = nullptr;
+
+			const auto result = AssetSuite::LoadFile(nullptr, "test_file.xyz", &blob);
+
+			Assert::AreEqual(true, AssetSuite::Result::ErrorInvalidContext == result);
+			Assert::IsNull(blob);
+		}
+
+		TEST_METHOD(LoadFileRejectsInvalidArguments)
+		{
+			AssetSuite::ContextHandle context = nullptr;
+			AssetSuite::BlobHandle blob = nullptr;
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+
+			Assert::AreEqual(true, AssetSuite::Result::ErrorInvalidArgument == AssetSuite::LoadFile(context, nullptr, &blob));
+			Assert::AreEqual(true, AssetSuite::Result::ErrorInvalidArgument == AssetSuite::LoadFile(context, "test_file.xyz", nullptr));
+
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::LoadFile(context, "test_file.xyz", &blob));
+			AssetSuite::BlobHandle originalBlob = blob;
+			Assert::AreEqual(true, AssetSuite::Result::ErrorInvalidArgument == AssetSuite::LoadFile(context, "test_file.xyz", &blob));
+			Assert::IsTrue(originalBlob == blob);
+
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::ReleaseBlob(context, &blob));
+			DestroyContextForCleanup(context);
+		}
+
+		TEST_METHOD(LoadFileReturnsFileNotFoundForMissingFile)
+		{
+			AssetSuite::ContextHandle context = nullptr;
+			AssetSuite::BlobHandle blob = nullptr;
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+
+			const auto result = AssetSuite::LoadFile(context, "missing_blob_source.bin", &blob);
+
+			Assert::AreEqual(true, AssetSuite::Result::ErrorFileNotFound == result);
+			Assert::IsNull(blob);
+			Assert::AreEqual(static_cast<size_t>(0), context->Runtime().BlobStorage().LiveCount());
+
+			DestroyContextForCleanup(context);
+		}
+
+		TEST_METHOD(ReleaseBlobClearsHandleAndInvalidatesStorage)
+		{
+			AssetSuite::ContextHandle context = nullptr;
+			AssetSuite::BlobHandle blob = nullptr;
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::LoadFile(context, "test_file.xyz", &blob));
+
+			const auto result = AssetSuite::ReleaseBlob(context, &blob);
+
+			Assert::AreEqual(true, AssetSuite::Result::Success == result);
+			Assert::IsNull(blob);
+			Assert::AreEqual(static_cast<size_t>(0), context->Runtime().BlobStorage().LiveCount());
+
+			DestroyContextForCleanup(context);
+		}
+
+		TEST_METHOD(ReleaseBlobRejectsInvalidInputs)
+		{
+			AssetSuite::ContextHandle context = nullptr;
+			AssetSuite::BlobHandle blob = nullptr;
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+
+			Assert::AreEqual(true, AssetSuite::Result::ErrorInvalidContext == AssetSuite::ReleaseBlob(nullptr, &blob));
+			Assert::AreEqual(true, AssetSuite::Result::ErrorInvalidHandle == AssetSuite::ReleaseBlob(context, nullptr));
+			Assert::AreEqual(true, AssetSuite::Result::ErrorInvalidHandle == AssetSuite::ReleaseBlob(context, &blob));
+
+			DestroyContextForCleanup(context);
+		}
+
+		TEST_METHOD(ReleaseBlobRejectsDoubleReleaseAndStaleCopiedHandle)
+		{
+			AssetSuite::ContextHandle context = nullptr;
+			AssetSuite::BlobHandle blob = nullptr;
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::LoadFile(context, "test_file.xyz", &blob));
+			AssetSuite::BlobHandle copiedBlob = blob;
+
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::ReleaseBlob(context, &blob));
+
+			Assert::AreEqual(true, AssetSuite::Result::ErrorInvalidHandle == AssetSuite::ReleaseBlob(context, &blob));
+			Assert::AreEqual(true, AssetSuite::Result::ErrorInvalidHandle == AssetSuite::ReleaseBlob(context, &copiedBlob));
+			Assert::IsNotNull(copiedBlob);
+
+			DestroyContextForCleanup(context);
+		}
+
+		TEST_METHOD(ReleaseBlobRejectsWrongContext)
+		{
+			AssetSuite::ContextHandle firstContext = nullptr;
+			AssetSuite::ContextHandle secondContext = nullptr;
+			AssetSuite::BlobHandle firstBlob = nullptr;
+			AssetSuite::BlobHandle secondBlob = nullptr;
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &firstContext));
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &secondContext));
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::LoadFile(firstContext, "test_file.xyz", &firstBlob));
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::LoadFile(secondContext, "test_file.xyz", &secondBlob));
+			Assert::IsFalse(firstBlob == secondBlob);
+
+			const auto result = AssetSuite::ReleaseBlob(secondContext, &firstBlob);
+
+			Assert::AreEqual(true, AssetSuite::Result::ErrorInvalidHandle == result);
+			Assert::IsNotNull(firstBlob);
+			Assert::AreEqual(static_cast<size_t>(1), firstContext->Runtime().BlobStorage().LiveCount());
+			Assert::AreEqual(static_cast<size_t>(1), secondContext->Runtime().BlobStorage().LiveCount());
+
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::ReleaseBlob(secondContext, &secondBlob));
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::ReleaseBlob(firstContext, &firstBlob));
+			DestroyContextForCleanup(secondContext);
+			DestroyContextForCleanup(firstContext);
+		}
+
+		TEST_METHOD(BlobStorageReusesReleasedSlotsAndRejectsOldGenerations)
+		{
+			AssetSuite::ContextHandle context = nullptr;
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+
+			AssetSuite::BlobHandle blob = nullptr;
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::LoadFile(context, "test_file.xyz", &blob));
+			AssetSuite::BlobHandle staleBlob = blob;
+			Assert::AreEqual(static_cast<size_t>(1), context->Runtime().BlobStorage().SlotCapacity());
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::ReleaseBlob(context, &blob));
+
+			for (int iteration = 0; iteration < 8; ++iteration)
+			{
+				Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::LoadFile(context, "test_file.xyz", &blob));
+				Assert::AreEqual(static_cast<size_t>(1), context->Runtime().BlobStorage().LiveCount());
+				Assert::AreEqual(static_cast<size_t>(1), context->Runtime().BlobStorage().SlotCapacity());
+				Assert::AreEqual(true, AssetSuite::Result::ErrorInvalidHandle == AssetSuite::ReleaseBlob(context, &staleBlob));
+				Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::ReleaseBlob(context, &blob));
+			}
+
+			Assert::AreEqual(static_cast<size_t>(0), context->Runtime().BlobStorage().LiveCount());
+			Assert::AreEqual(static_cast<size_t>(1), context->Runtime().BlobStorage().SlotCapacity());
+			Assert::IsNotNull(staleBlob);
 
 			DestroyContextForCleanup(context);
 		}

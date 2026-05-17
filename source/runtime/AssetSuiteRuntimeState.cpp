@@ -8,6 +8,75 @@
 
 #include <fstream>
 #include <new>
+#include <atomic>
+#include <cstdint>
+#include <utility>
+
+namespace
+{
+	static_assert(sizeof(uintptr_t) >= 8, "BlobHandle token encoding requires a 64-bit target.");
+
+	constexpr uint32_t SLOT_INDEX_BITS = 24;
+	constexpr uint32_t GENERATION_BITS = 20;
+	constexpr uint32_t CONTEXT_ID_BITS = 20;
+	constexpr uintptr_t SLOT_INDEX_MASK = (uintptr_t{ 1 } << SLOT_INDEX_BITS) - 1u;
+	constexpr uintptr_t GENERATION_MASK = (uintptr_t{ 1 } << GENERATION_BITS) - 1u;
+	constexpr uintptr_t CONTEXT_ID_MASK = (uintptr_t{ 1 } << CONTEXT_ID_BITS) - 1u;
+	constexpr uint32_t INITIAL_BLOB_GENERATION = 1;
+	constexpr uint32_t INITIAL_BLOB_CONTEXT_ID = 1;
+
+	std::atomic<uint32_t> nextBlobContextId = INITIAL_BLOB_CONTEXT_ID;
+
+	AssetSuite::BlobHandle EncodeBlobHandle(size_t slotIndex, uint32_t generation, uint32_t contextId) noexcept
+	{
+		if (slotIndex >= SLOT_INDEX_MASK || generation == 0 || contextId == 0)
+		{
+			return nullptr;
+		}
+
+		const uintptr_t token =
+			(static_cast<uintptr_t>(contextId) << (SLOT_INDEX_BITS + GENERATION_BITS)) |
+			(static_cast<uintptr_t>(generation) << SLOT_INDEX_BITS) |
+			(static_cast<uintptr_t>(slotIndex) + 1u);
+		return reinterpret_cast<AssetSuite::BlobHandle>(token);
+	}
+
+	bool DecodeBlobHandle(
+		AssetSuite::BlobHandle handle,
+		size_t& slotIndex,
+		uint32_t& generation,
+		uint32_t& contextId) noexcept
+	{
+		const uintptr_t token = reinterpret_cast<uintptr_t>(handle);
+		const uintptr_t encodedSlotIndex = token & SLOT_INDEX_MASK;
+		if (encodedSlotIndex == 0)
+		{
+			return false;
+		}
+
+		generation = static_cast<uint32_t>((token >> SLOT_INDEX_BITS) & GENERATION_MASK);
+		contextId = static_cast<uint32_t>((token >> (SLOT_INDEX_BITS + GENERATION_BITS)) & CONTEXT_ID_MASK);
+		if (generation == 0 || contextId == 0)
+		{
+			return false;
+		}
+
+		slotIndex = static_cast<size_t>(encodedSlotIndex - 1u);
+		return true;
+	}
+
+	uint32_t AllocateBlobContextId() noexcept
+	{
+		uint32_t contextId = nextBlobContextId.fetch_add(1, std::memory_order_relaxed) & static_cast<uint32_t>(CONTEXT_ID_MASK);
+		return contextId == 0 ? INITIAL_BLOB_CONTEXT_ID : contextId;
+	}
+
+	uint32_t NextBlobGeneration(uint32_t generation) noexcept
+	{
+		generation = (generation + 1u) & static_cast<uint32_t>(GENERATION_MASK);
+		return generation == 0 ? INITIAL_BLOB_GENERATION : generation;
+	}
+}
 
 AssetSuite::Internal::RuntimeState::RuntimeState()
 	: codecs()
@@ -80,7 +149,7 @@ AssetSuite::Internal::RuntimeState::Diagnostics::Entries() const noexcept
 AssetSuite::ErrorCode AssetSuite::Internal::RuntimeState::FileLoader::LoadToMemory(
 	const std::filesystem::path& fileName,
 	bool isBinary,
-	std::vector<BYTE>& output) const
+	std::vector<uint8_t>& output) const
 {
 	if (!std::filesystem::exists(fileName))
 	{
@@ -113,6 +182,121 @@ AssetSuite::ErrorCode AssetSuite::Internal::RuntimeState::FileLoader::LoadToMemo
 	}
 
 	return ErrorCode::OK;
+}
+
+AssetSuite::Internal::RuntimeState::BlobStorage::BlobStorage()
+	: contextId(AllocateBlobContextId())
+{
+}
+
+AssetSuite::BlobHandle AssetSuite::Internal::RuntimeState::BlobStorage::Create(Blob blob)
+{
+	size_t slotIndex = 0;
+	if (!freeSlots.empty())
+	{
+		slotIndex = freeSlots.back();
+		freeSlots.pop_back();
+	}
+	else
+	{
+		slotIndex = slots.size();
+		slots.push_back({ nullptr, INITIAL_BLOB_GENERATION });
+	}
+
+	slots[slotIndex].blob = std::make_unique<Blob>(std::move(blob));
+	return EncodeBlobHandle(slotIndex, slots[slotIndex].generation, contextId);
+}
+
+bool AssetSuite::Internal::RuntimeState::BlobStorage::Owns(BlobHandle blob) const noexcept
+{
+	return Get(blob) != nullptr;
+}
+
+bool AssetSuite::Internal::RuntimeState::BlobStorage::IsLive(BlobHandle blob) const noexcept
+{
+	return Get(blob) != nullptr;
+}
+
+const AssetSuite::Internal::Blob*
+AssetSuite::Internal::RuntimeState::BlobStorage::Get(BlobHandle blob) const noexcept
+{
+	size_t slotIndex = 0;
+	uint32_t generation = 0;
+	uint32_t decodedContextId = 0;
+	if (!DecodeBlobHandle(blob, slotIndex, generation, decodedContextId))
+	{
+		return nullptr;
+	}
+
+	if (decodedContextId != contextId)
+	{
+		return nullptr;
+	}
+
+	if (slotIndex >= slots.size())
+	{
+		return nullptr;
+	}
+
+	const Slot& slot = slots[slotIndex];
+	if (slot.generation != generation || !slot.blob)
+	{
+		return nullptr;
+	}
+
+	return slot.blob.get();
+}
+
+AssetSuite::Result AssetSuite::Internal::RuntimeState::BlobStorage::Release(BlobHandle* blob) noexcept
+{
+	size_t slotIndex = 0;
+	uint32_t generation = 0;
+	uint32_t decodedContextId = 0;
+	if (!blob || !DecodeBlobHandle(*blob, slotIndex, generation, decodedContextId))
+	{
+		return Result::ErrorInvalidHandle;
+	}
+
+	if (decodedContextId != contextId)
+	{
+		return Result::ErrorInvalidHandle;
+	}
+
+	if (slotIndex >= slots.size())
+	{
+		return Result::ErrorInvalidHandle;
+	}
+
+	Slot& slot = slots[slotIndex];
+	if (slot.generation != generation || !slot.blob)
+	{
+		return Result::ErrorInvalidHandle;
+	}
+
+	slot.blob.reset();
+	slot.generation = NextBlobGeneration(slot.generation);
+	freeSlots.push_back(slotIndex);
+	*blob = nullptr;
+	return Result::Success;
+}
+
+size_t AssetSuite::Internal::RuntimeState::BlobStorage::LiveCount() const noexcept
+{
+	size_t count = 0;
+	for (const auto& slot : slots)
+	{
+		if (slot.blob)
+		{
+			++count;
+		}
+	}
+
+	return count;
+}
+
+size_t AssetSuite::Internal::RuntimeState::BlobStorage::SlotCapacity() const noexcept
+{
+	return slots.size();
 }
 
 bool AssetSuite::Internal::RuntimeState::CodecRegistry::RegisterImageDecoder(

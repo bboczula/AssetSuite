@@ -115,6 +115,12 @@ static_assert(std::is_same_v<
 		AssetSuite::LoggingCallback,
 		AssetSuite::LogLevel,
 		void*)>);
+static_assert(std::is_same_v<
+	decltype(&AssetSuite::LoadFile),
+	AssetSuite::Result (*)(AssetSuite::ContextHandle, const char*, AssetSuite::BlobHandle*)>);
+static_assert(std::is_same_v<
+	decltype(&AssetSuite::ReleaseBlob),
+	AssetSuite::Result (*)(AssetSuite::ContextHandle, AssetSuite::BlobHandle*)>);
 
 void PublicLoggingCallback(AssetSuite::LogLevel, const char*, void*)
 {
@@ -145,6 +151,8 @@ int main()
 		nullptr,
 		AssetSuite::LogLevel::Trace,
 		nullptr);
+	const AssetSuite::Result loadNullPathResult = AssetSuite::LoadFile(context, nullptr, &blob);
+	const AssetSuite::Result releaseNullBlobResult = AssetSuite::ReleaseBlob(context, &blob);
 	const AssetSuite::Result destroyExplicitResult = AssetSuite::DestroyContext(&context);
 
 	return context || blob || image || mesh ||
@@ -157,5 +165,7 @@ int main()
 		createExplicitResult == AssetSuite::Result::ErrorUnknown ||
 		setLoggingResult == AssetSuite::Result::ErrorUnknown ||
 		unregisterLoggingResult == AssetSuite::Result::ErrorUnknown ||
+		loadNullPathResult == AssetSuite::Result::ErrorUnknown ||
+		releaseNullBlobResult == AssetSuite::Result::ErrorUnknown ||
 		destroyExplicitResult == AssetSuite::Result::ErrorUnknown;
 }

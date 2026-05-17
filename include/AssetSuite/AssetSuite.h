@@ -37,4 +37,31 @@ namespace AssetSuite
 		LoggingCallback callback,
 		LogLevel minLevel,
 		void* userData);
+
+	// Loads a file into a runtime-owned blob. outBlob must point to a null
+	// handle and receives ownership of the created blob handle on success.
+	//
+	// The blob bytes and source metadata are owned by the context. The caller
+	// retains ownership of filePath and may release or mutate that string after
+	// the call returns. A returned blob remains valid until ReleaseBlob is
+	// called for the same context, or until the owning context is destroyed.
+	// Blob operations follow the context's external synchronization
+	// requirements.
+	//
+	// Passing a null context returns Result::ErrorInvalidContext. Passing a
+	// null filePath, null outBlob, or non-null *outBlob returns
+	// Result::ErrorInvalidArgument. Missing files return
+	// Result::ErrorFileNotFound.
+	ASSET_SUITE_API Result LoadFile(ContextHandle context, const char* filePath, BlobHandle* outBlob);
+
+	// Releases a runtime-owned blob and sets the caller's handle to nullptr on
+	// success. Memory and metadata behind the blob are invalid immediately
+	// after a successful release.
+	//
+	// The blob must have been created by LoadFile on the same context. Passing
+	// a null context returns Result::ErrorInvalidContext. Passing nullptr, a
+	// pointer to a null blob handle, a stale handle, or a handle from another
+	// context returns Result::ErrorInvalidHandle. On failure, the caller's blob
+	// value is preserved.
+	ASSET_SUITE_API Result ReleaseBlob(ContextHandle context, BlobHandle* blob);
 }

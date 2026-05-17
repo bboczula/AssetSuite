@@ -41,6 +41,19 @@ namespace
 		normalizedDesc = *desc;
 		return AssetSuite::Result::Success;
 	}
+
+	AssetSuite::Result MapFileLoadResult(AssetSuite::ErrorCode error)
+	{
+		switch (error)
+		{
+		case AssetSuite::ErrorCode::OK:
+			return AssetSuite::Result::Success;
+		case AssetSuite::ErrorCode::NonExistingFile:
+			return AssetSuite::Result::ErrorFileNotFound;
+		default:
+			return AssetSuite::Result::ErrorUnknown;
+		}
+	}
 }
 
 AssetSuite::Result AssetSuite::GetVersion(Version* outVersion)
@@ -76,6 +89,8 @@ const char* AssetSuite::GetResultString(Result result)
 		return "Error: out of memory";
 	case Result::ErrorInvalidContext:
 		return "Error: invalid context";
+	case Result::ErrorInvalidHandle:
+		return "Error: invalid handle";
 	case Result::ErrorUnknown:
 		return "Error: unknown";
 	default:
@@ -123,6 +138,59 @@ AssetSuite::Result AssetSuite::SetLoggingCallback(
 
 	context->Runtime().SetLoggingCallback(callback, minLevel, userData);
 	return Result::Success;
+}
+
+AssetSuite::Result AssetSuite::LoadFile(ContextHandle context, const char* filePath, BlobHandle* outBlob)
+{
+	if (!context)
+	{
+		return Result::ErrorInvalidContext;
+	}
+
+	if (!filePath || !outBlob || *outBlob)
+	{
+		return Result::ErrorInvalidArgument;
+	}
+
+	std::vector<uint8_t> rawBytes;
+	const ErrorCode loadResult = context->Runtime().FileLoader().LoadToMemory(filePath, true, rawBytes);
+	const Result mappedResult = MapFileLoadResult(loadResult);
+	if (mappedResult != Result::Success)
+	{
+		context->Runtime().Diagnostics().Add(loadResult, "Failed to load blob source file.");
+		return mappedResult;
+	}
+
+	try
+	{
+		Internal::Blob blob(std::move(rawBytes), Internal::MakeBlobSourceMetadata(filePath));
+		*outBlob = context->Runtime().BlobStorage().Create(std::move(blob));
+	}
+	catch (const std::bad_alloc&)
+	{
+		return Result::ErrorOutOfMemory;
+	}
+	catch (...)
+	{
+		return Result::ErrorUnknown;
+	}
+
+	return Result::Success;
+}
+
+AssetSuite::Result AssetSuite::ReleaseBlob(ContextHandle context, BlobHandle* blob)
+{
+	if (!context)
+	{
+		return Result::ErrorInvalidContext;
+	}
+
+	if (!blob || !*blob)
+	{
+		return Result::ErrorInvalidHandle;
+	}
+
+	return context->Runtime().BlobStorage().Release(blob);
 }
 
 AssetSuite::Manager::Manager()
