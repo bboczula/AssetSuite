@@ -488,6 +488,7 @@ AssetSuite::ErrorCode AssetSuite::Manager::LoadFileToMemory(const std::string& f
       const ErrorCode result = ::LoadRuntimeFileToMemory(state, fileName, isBinary, state.rawBuffer);
       if (result != ErrorCode::OK)
       {
+            state.rawBuffer.clear();
             state.diagnostics.Add(result, "Failed to load file into runtime memory.");
       }
 

@@ -734,6 +734,20 @@ namespace GeneralUnitTests
 			Assert::AreEqual(true, AssetSuite::ErrorCode::NonExistingFile == error);
 		}
 
+		TEST_METHOD(ImageFailedLoadClearsPreviousRawBuffer)
+		{
+			AssetSuite::Manager manager;
+
+			auto error = manager.ImageLoad("test_file.xyz");
+			Assert::AreEqual(true, AssetSuite::ErrorCode::OK == error);
+
+			error = manager.ImageLoad("non-existing-image.bmp");
+			Assert::AreEqual(true, AssetSuite::ErrorCode::NonExistingFile == error);
+
+			error = manager.ImageDecode(AssetSuite::ImageDecoders::Auto);
+			Assert::AreEqual(true, AssetSuite::ErrorCode::RawBufferIsEmpty == error);
+		}
+
 		TEST_METHOD(RawBufferIsEmpty)
 		{
 			// In this test we don't need real data
@@ -766,6 +780,20 @@ namespace GeneralUnitTests
 
 			auto error = manager.MeshLoad("non-existing-mesh.obj");
 			Assert::AreEqual(true, AssetSuite::ErrorCode::NonExistingFile == error);
+		}
+
+		TEST_METHOD(FailedMeshLoadClearsPreviousRawBuffer)
+		{
+			AssetSuite::Manager manager;
+
+			auto error = manager.MeshLoad("test_mesh.obj");
+			Assert::AreEqual(true, AssetSuite::ErrorCode::OK == error);
+
+			error = manager.MeshLoad("non-existing-mesh.obj");
+			Assert::AreEqual(true, AssetSuite::ErrorCode::NonExistingFile == error);
+
+			error = manager.MeshDecode(AssetSuite::MeshDecoders::Auto);
+			Assert::AreEqual(true, AssetSuite::ErrorCode::RawBufferIsEmpty == error);
 		}
 
 		TEST_METHOD(FileTypeNotSupported)
