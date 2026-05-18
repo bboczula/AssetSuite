@@ -64,9 +64,9 @@ namespace AssetSuite
 	// invalid blob handle, including a handle from another context, returns
 	// Result::ErrorInvalidHandle. Passing a null outImage or non-null
 	// *outImage returns Result::ErrorInvalidArgument. Inputs that cannot be
-	// routed to a registered image decoder return
+	// routed to a registered image codec return
 	// Result::ErrorUnsupportedFormat. Recognized but malformed image bytes
-	// return Result::ErrorMalformedData where the selected decoder can
+	// return Result::ErrorMalformedData where the selected codec can
 	// distinguish malformed input, otherwise Result::ErrorDecodeFailed.
 	ASSET_SUITE_API Result DecodeImage(ContextHandle context, BlobHandle blob, ImageHandle* outImage);
 
