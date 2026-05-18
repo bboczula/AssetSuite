@@ -77,6 +77,10 @@ Once a decoder is selected, malformed source bytes are reported as
 failure as input corruption. Other selected-decoder failures are reported as
 `AssetSuite::Result::ErrorDecodeFailed`.
 
+Blob decode entry points preserve the caller's source `AssetSuite::BlobHandle`.
+File decode entry points use the same runtime route after loading file bytes,
+but their temporary source blob is not exposed or retained after the call.
+
 ## Usage
 
 The current 2.0 public SDK headers expose the stable type, version, and context

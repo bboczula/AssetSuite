@@ -12,6 +12,7 @@ The runtime currently owns:
 - diagnostics storage
 - file loading support
 - private blob handle storage, raw bytes, and copied source metadata
+- private decoded image and mesh handle storage
 - source file metadata
 - raw, decoded, and formatted buffers
 - transient image and mesh metadata
@@ -42,6 +43,24 @@ The public SDK surface is guarded by `PublicHeaderCompile`, `PublicHeaderHygiene
 
 `RuntimeState::BlobStorage` owns reusable blob slots for one context. `ReleaseBlob` clears the blob payload, advances the slot generation, returns the slot to the free list, and nulls the caller's handle. Copied stale handles are rejected by generation mismatch, and handles from another context are rejected by context-id mismatch before slot lookup.
 
+## Decode Routing
+
+Public blob and file decode entry points route through `RuntimeContext` before
+codec probing or decoder lookup occurs. Public API functions validate context,
+output, and stored blob handles, then delegate to the private runtime decode
+helpers.
+
+The runtime probes source bytes first and falls back to source extension only
+when byte signatures or content markers are inconclusive. Unsupported inputs
+return `Result::ErrorUnsupportedFormat`. Recognized inputs that are too small or
+rejected by the selected legacy `bool` decoder return
+`Result::ErrorMalformedData`.
+
+Decoded image and mesh handles are runtime-owned child objects. File decode
+entry points load bytes through the shared file loader and wrap them in a
+temporary internal blob object, so successful file decode does not create a
+persistent public `BlobHandle`.
+
 ## File Loading
 
 `RuntimeState::FileLoader` is the shared file-read service for public blob loading and the legacy `Manager` image/mesh file entry points. Missing paths return `ErrorCode::NonExistingFile`, while existing paths that cannot be opened, sized, or fully read return `ErrorCode::IoFailure`.
@@ -52,8 +71,6 @@ The public SDK adapter maps `NonExistingFile` to `Result::ErrorFileNotFound` and
 
 This runtime layer is intentionally foundational. The following work is deferred to later stories:
 
-- image and mesh child-handle tracking
-- codec probing and richer format detection
 - public diagnostics reporting
 - allocator hooks wired into all internal allocations
 - broader asset storage and cleanup policies
