@@ -2,6 +2,7 @@
 #include <CppUnitTest.h>
 
 #include <cstdint>
+#include <fstream>
 #include <filesystem>
 #include <utility>
 #include <vector>
@@ -82,6 +83,12 @@ namespace
 		}
 
 		return currentDirectory;
+	}
+
+	void WriteBinaryFile(const std::filesystem::path& path, const std::vector<uint8_t>& bytes)
+	{
+		std::ofstream file(path, std::ios::binary | std::ios::trunc);
+		file.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
 	}
 
 	class TestImageDecoder final : public AssetSuite::ImageDecoder
@@ -746,6 +753,50 @@ namespace GeneralUnitTests
 			Assert::IsNull(mesh);
 
 			DestroyContextForCleanup(context);
+		}
+
+		TEST_METHOD(DecodeImageMapsMalformedRecognizedDataConsistently)
+		{
+			const std::filesystem::path malformedImagePath = "malformed_decode_image.bmp";
+			WriteBinaryFile(malformedImagePath, { 'B', 'M' });
+
+			AssetSuite::ContextHandle context = nullptr;
+			AssetSuite::BlobHandle blob = nullptr;
+			AssetSuite::ImageHandle blobImage = nullptr;
+			AssetSuite::ImageHandle fileImage = nullptr;
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::LoadFile(context, malformedImagePath.string().c_str(), &blob));
+
+			Assert::AreEqual(true, AssetSuite::Result::ErrorMalformedData == AssetSuite::DecodeImage(context, blob, &blobImage));
+			Assert::AreEqual(true, AssetSuite::Result::ErrorMalformedData == AssetSuite::DecodeImageFromFile(context, malformedImagePath.string().c_str(), &fileImage));
+			Assert::IsNull(blobImage);
+			Assert::IsNull(fileImage);
+
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::ReleaseBlob(context, &blob));
+			DestroyContextForCleanup(context);
+			std::filesystem::remove(malformedImagePath);
+		}
+
+		TEST_METHOD(DecodeMeshMapsMalformedRecognizedDataConsistently)
+		{
+			const std::filesystem::path malformedMeshPath = "malformed_decode_mesh.obj";
+			WriteBinaryFile(malformedMeshPath, {});
+
+			AssetSuite::ContextHandle context = nullptr;
+			AssetSuite::BlobHandle blob = nullptr;
+			AssetSuite::MeshHandle blobMesh = nullptr;
+			AssetSuite::MeshHandle fileMesh = nullptr;
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::LoadFile(context, malformedMeshPath.string().c_str(), &blob));
+
+			Assert::AreEqual(true, AssetSuite::Result::ErrorMalformedData == AssetSuite::DecodeMesh(context, blob, &blobMesh));
+			Assert::AreEqual(true, AssetSuite::Result::ErrorMalformedData == AssetSuite::DecodeMeshFromFile(context, malformedMeshPath.string().c_str(), &fileMesh));
+			Assert::IsNull(blobMesh);
+			Assert::IsNull(fileMesh);
+
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::ReleaseBlob(context, &blob));
+			DestroyContextForCleanup(context);
+			std::filesystem::remove(malformedMeshPath);
 		}
 
 		TEST_METHOD(BlobStorageReusesReleasedSlotsAndRejectsOldGenerations)
