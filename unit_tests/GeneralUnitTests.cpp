@@ -801,16 +801,13 @@ namespace GeneralUnitTests
 	{
 	public:
 
-		TEST_METHOD(FileExtensionNotSupported)
+		TEST_METHOD(ImageUnsupportedExtensionUsesRecognizedSignature)
 		{
-			// In this test we don't need real data
-			std::vector<BYTE> output;
 			AssetSuite::Manager manager;
 
-			// This file needs to exist
 			manager.ImageLoad("test_file.xyz");
 			auto error = manager.ImageDecode(AssetSuite::ImageDecoders::Auto);
-			Assert::AreEqual(true, AssetSuite::ErrorCode::FileTypeNotSupported == error);
+			Assert::AreEqual(true, AssetSuite::ErrorCode::OK == error);
 		}
 
 		TEST_METHOD(ImageOpeningNonExistingFile)
