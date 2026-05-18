@@ -42,6 +42,13 @@ namespace
 			return blob.ByteSize() > 0;
 		}
 	}
+
+	AssetSuite::Result MapSelectedDecoderFailure() noexcept
+	{
+		// Current decoder interfaces return only bool, so a selected decoder
+		// rejecting bytes is the best available malformed-input signal.
+		return AssetSuite::Result::ErrorMalformedData;
+	}
 }
 
 AssetSuite::Internal::RuntimeContext::RuntimeContext(const ContextDesc& desc)
@@ -173,7 +180,7 @@ AssetSuite::Result AssetSuite::Internal::RuntimeContext::DecodeImageBlob(
 	if (!imageDecoder->Decode(decodedBytes, const_cast<BYTE*>(reinterpret_cast<const BYTE*>(blob.Data())), descriptor))
 	{
 		Diagnostics().Add(ErrorCode::Undefined, "Image decoder rejected malformed data.");
-		return Result::ErrorMalformedData;
+		return MapSelectedDecoderFailure();
 	}
 
 	ImageDesc publicDesc = {
@@ -236,7 +243,7 @@ AssetSuite::Result AssetSuite::Internal::RuntimeContext::DecodeMeshBlob(
 	if (!meshDecoder->Decode(decodedBytes, decodeBuffer.data(), descriptor))
 	{
 		Diagnostics().Add(ErrorCode::Undefined, "Mesh decoder rejected malformed data.");
-		return Result::ErrorMalformedData;
+		return MapSelectedDecoderFailure();
 	}
 
 	MeshDesc publicDesc = {
