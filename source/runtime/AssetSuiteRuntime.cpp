@@ -1,5 +1,49 @@
 #include "AssetSuiteRuntime.h"
 
+#include <new>
+#include <utility>
+#include <vector>
+
+namespace
+{
+	AssetSuite::PixelFormat MapImagePixelFormat(AssetSuite::ImageFormat format) noexcept
+	{
+		switch (format)
+		{
+		case AssetSuite::ImageFormat::RGB8:
+			return AssetSuite::PixelFormat::RGB8;
+		case AssetSuite::ImageFormat::RGBA8:
+			return AssetSuite::PixelFormat::RGBA8;
+		default:
+			return AssetSuite::PixelFormat::Unknown;
+		}
+	}
+
+	bool HasMinimumImageDecodeBytes(AssetSuite::ImageDecoders decoder, const AssetSuite::Internal::Blob& blob) noexcept
+	{
+		switch (decoder)
+		{
+		case AssetSuite::ImageDecoders::BMP:
+			return blob.ByteSize() >= 54;
+		case AssetSuite::ImageDecoders::PNG:
+			return blob.ByteSize() >= 8;
+		default:
+			return blob.ByteSize() > 0;
+		}
+	}
+
+	bool HasMinimumMeshDecodeBytes(AssetSuite::MeshDecoders decoder, const AssetSuite::Internal::Blob& blob) noexcept
+	{
+		switch (decoder)
+		{
+		case AssetSuite::MeshDecoders::WAVEFRONT:
+			return blob.ByteSize() > 0;
+		default:
+			return blob.ByteSize() > 0;
+		}
+	}
+}
+
 AssetSuite::Internal::RuntimeContext::RuntimeContext(const ContextDesc& desc)
 	: desc(desc)
 	, state()
@@ -95,6 +139,128 @@ const AssetSuite::Internal::RuntimeState::CodecRegistry&
 AssetSuite::Internal::RuntimeContext::CodecRegistry() const noexcept
 {
 	return state.codecRegistry;
+}
+
+AssetSuite::Result AssetSuite::Internal::RuntimeContext::DecodeImageBlob(
+	const Blob& blob,
+	ImageHandle* outImage)
+{
+	const ImageDecoders decoder = CodecRegistry().ProbeImageDecoder(
+		blob.SourceMetadata().extension,
+		blob.Data(),
+		static_cast<size_t>(blob.ByteSize()));
+	if (decoder == ImageDecoders::Auto)
+	{
+		Diagnostics().Add(ErrorCode::FileTypeNotSupported, "Image blob format is not supported.");
+		return Result::ErrorUnsupportedFormat;
+	}
+
+	if (!HasMinimumImageDecodeBytes(decoder, blob))
+	{
+		Diagnostics().Add(ErrorCode::Undefined, "Image blob is too small for the selected decoder.");
+		return Result::ErrorMalformedData;
+	}
+
+	ImageDecoder* imageDecoder = CodecRegistry().FindImageDecoder(decoder);
+	if (!imageDecoder)
+	{
+		Diagnostics().Add(ErrorCode::FileTypeNotSupported, "Image decoder is not registered.");
+		return Result::ErrorUnsupportedFormat;
+	}
+
+	std::vector<BYTE> decodedBytes;
+	ImageDescriptor descriptor = {};
+	if (!imageDecoder->Decode(decodedBytes, const_cast<BYTE*>(reinterpret_cast<const BYTE*>(blob.Data())), descriptor))
+	{
+		Diagnostics().Add(ErrorCode::Undefined, "Image decoder rejected malformed data.");
+		return Result::ErrorMalformedData;
+	}
+
+	ImageDesc publicDesc = {
+		sizeof(ImageDesc),
+		descriptor.width,
+		descriptor.height,
+		MapImagePixelFormat(descriptor.format),
+		1,
+		1
+	};
+
+	try
+	{
+		*outImage = ImageStorage().Create(publicDesc, std::move(decodedBytes));
+	}
+	catch (const std::bad_alloc&)
+	{
+		return Result::ErrorOutOfMemory;
+	}
+	catch (...)
+	{
+		return Result::ErrorUnknown;
+	}
+
+	return Result::Success;
+}
+
+AssetSuite::Result AssetSuite::Internal::RuntimeContext::DecodeMeshBlob(
+	const Blob& blob,
+	MeshHandle* outMesh)
+{
+	const MeshDecoders decoder = CodecRegistry().ProbeMeshDecoder(
+		blob.SourceMetadata().extension,
+		blob.Data(),
+		static_cast<size_t>(blob.ByteSize()));
+	if (decoder == MeshDecoders::Auto)
+	{
+		Diagnostics().Add(ErrorCode::FileTypeNotSupported, "Mesh blob format is not supported.");
+		return Result::ErrorUnsupportedFormat;
+	}
+
+	if (!HasMinimumMeshDecodeBytes(decoder, blob))
+	{
+		Diagnostics().Add(ErrorCode::Undefined, "Mesh blob is too small for the selected decoder.");
+		return Result::ErrorMalformedData;
+	}
+
+	MeshDecoder* meshDecoder = CodecRegistry().FindMeshDecoder(decoder);
+	if (!meshDecoder)
+	{
+		Diagnostics().Add(ErrorCode::FileTypeNotSupported, "Mesh decoder is not registered.");
+		return Result::ErrorUnsupportedFormat;
+	}
+
+	std::vector<BYTE> decodeBuffer(blob.Data(), blob.Data() + static_cast<size_t>(blob.ByteSize()));
+	decodeBuffer.push_back('\0');
+
+	std::vector<BYTE> decodedBytes;
+	MeshDescriptor descriptor = {};
+	if (!meshDecoder->Decode(decodedBytes, decodeBuffer.data(), descriptor))
+	{
+		Diagnostics().Add(ErrorCode::Undefined, "Mesh decoder rejected malformed data.");
+		return Result::ErrorMalformedData;
+	}
+
+	MeshDesc publicDesc = {
+		sizeof(MeshDesc),
+		descriptor.numOfVertices,
+		descriptor.numOfIndices,
+		0,
+		0
+	};
+
+	try
+	{
+		*outMesh = MeshStorage().Create(publicDesc, std::move(decodedBytes));
+	}
+	catch (const std::bad_alloc&)
+	{
+		return Result::ErrorOutOfMemory;
+	}
+	catch (...)
+	{
+		return Result::ErrorUnknown;
+	}
+
+	return Result::Success;
 }
 
 void AssetSuite::Internal::RuntimeContext::SetLoggingCallback(

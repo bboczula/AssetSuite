@@ -58,167 +58,6 @@ namespace
 		}
 	}
 
-	AssetSuite::PixelFormat MapImagePixelFormat(AssetSuite::ImageFormat format) noexcept
-	{
-		switch (format)
-		{
-		case AssetSuite::ImageFormat::RGB8:
-			return AssetSuite::PixelFormat::RGB8;
-		case AssetSuite::ImageFormat::RGBA8:
-			return AssetSuite::PixelFormat::RGBA8;
-		default:
-			return AssetSuite::PixelFormat::Unknown;
-		}
-	}
-
-	bool HasMinimumImageDecodeBytes(AssetSuite::ImageDecoders decoder, const AssetSuite::Internal::Blob& blob) noexcept
-	{
-		switch (decoder)
-		{
-		case AssetSuite::ImageDecoders::BMP:
-			return blob.ByteSize() >= 54;
-		case AssetSuite::ImageDecoders::PNG:
-			return blob.ByteSize() >= 8;
-		default:
-			return blob.ByteSize() > 0;
-		}
-	}
-
-	bool HasMinimumMeshDecodeBytes(AssetSuite::MeshDecoders decoder, const AssetSuite::Internal::Blob& blob) noexcept
-	{
-		switch (decoder)
-		{
-		case AssetSuite::MeshDecoders::WAVEFRONT:
-			return blob.ByteSize() > 0;
-		default:
-			return blob.ByteSize() > 0;
-		}
-	}
-
-	AssetSuite::Result DecodeImageBlob(
-		AssetSuite::Internal::RuntimeContext& runtime,
-		const AssetSuite::Internal::Blob& blob,
-		AssetSuite::ImageHandle* outImage)
-	{
-		const AssetSuite::ImageDecoders decoder = runtime.CodecRegistry().ProbeImageDecoder(
-			blob.SourceMetadata().extension,
-			blob.Data(),
-			static_cast<size_t>(blob.ByteSize()));
-		if (decoder == AssetSuite::ImageDecoders::Auto)
-		{
-			runtime.Diagnostics().Add(AssetSuite::ErrorCode::FileTypeNotSupported, "Image blob format is not supported.");
-			return AssetSuite::Result::ErrorUnsupportedFormat;
-		}
-
-		if (!HasMinimumImageDecodeBytes(decoder, blob))
-		{
-			runtime.Diagnostics().Add(AssetSuite::ErrorCode::Undefined, "Image blob is too small for the selected decoder.");
-			return AssetSuite::Result::ErrorMalformedData;
-		}
-
-		AssetSuite::ImageDecoder* imageDecoder = runtime.CodecRegistry().FindImageDecoder(decoder);
-		if (!imageDecoder)
-		{
-			runtime.Diagnostics().Add(AssetSuite::ErrorCode::FileTypeNotSupported, "Image decoder is not registered.");
-			return AssetSuite::Result::ErrorUnsupportedFormat;
-		}
-
-		std::vector<BYTE> decodedBytes;
-		AssetSuite::ImageDescriptor descriptor = {};
-		if (!imageDecoder->Decode(decodedBytes, const_cast<BYTE*>(reinterpret_cast<const BYTE*>(blob.Data())), descriptor))
-		{
-			runtime.Diagnostics().Add(AssetSuite::ErrorCode::Undefined, "Image decoder rejected malformed data.");
-			return AssetSuite::Result::ErrorMalformedData;
-		}
-
-		AssetSuite::ImageDesc publicDesc = {
-			sizeof(AssetSuite::ImageDesc),
-			descriptor.width,
-			descriptor.height,
-			MapImagePixelFormat(descriptor.format),
-			1,
-			1
-		};
-
-		try
-		{
-			*outImage = runtime.ImageStorage().Create(publicDesc, std::move(decodedBytes));
-		}
-		catch (const std::bad_alloc&)
-		{
-			return AssetSuite::Result::ErrorOutOfMemory;
-		}
-		catch (...)
-		{
-			return AssetSuite::Result::ErrorUnknown;
-		}
-
-		return AssetSuite::Result::Success;
-	}
-
-	AssetSuite::Result DecodeMeshBlob(
-		AssetSuite::Internal::RuntimeContext& runtime,
-		const AssetSuite::Internal::Blob& blob,
-		AssetSuite::MeshHandle* outMesh)
-	{
-		const AssetSuite::MeshDecoders decoder = runtime.CodecRegistry().ProbeMeshDecoder(
-			blob.SourceMetadata().extension,
-			blob.Data(),
-			static_cast<size_t>(blob.ByteSize()));
-		if (decoder == AssetSuite::MeshDecoders::Auto)
-		{
-			runtime.Diagnostics().Add(AssetSuite::ErrorCode::FileTypeNotSupported, "Mesh blob format is not supported.");
-			return AssetSuite::Result::ErrorUnsupportedFormat;
-		}
-
-		if (!HasMinimumMeshDecodeBytes(decoder, blob))
-		{
-			runtime.Diagnostics().Add(AssetSuite::ErrorCode::Undefined, "Mesh blob is too small for the selected decoder.");
-			return AssetSuite::Result::ErrorMalformedData;
-		}
-
-		AssetSuite::MeshDecoder* meshDecoder = runtime.CodecRegistry().FindMeshDecoder(decoder);
-		if (!meshDecoder)
-		{
-			runtime.Diagnostics().Add(AssetSuite::ErrorCode::FileTypeNotSupported, "Mesh decoder is not registered.");
-			return AssetSuite::Result::ErrorUnsupportedFormat;
-		}
-
-		std::vector<BYTE> decodeBuffer(blob.Data(), blob.Data() + static_cast<size_t>(blob.ByteSize()));
-		decodeBuffer.push_back('\0');
-
-		std::vector<BYTE> decodedBytes;
-		AssetSuite::MeshDescriptor descriptor = {};
-		if (!meshDecoder->Decode(decodedBytes, decodeBuffer.data(), descriptor))
-		{
-			runtime.Diagnostics().Add(AssetSuite::ErrorCode::Undefined, "Mesh decoder rejected malformed data.");
-			return AssetSuite::Result::ErrorMalformedData;
-		}
-
-		AssetSuite::MeshDesc publicDesc = {
-			sizeof(AssetSuite::MeshDesc),
-			descriptor.numOfVertices,
-			descriptor.numOfIndices,
-			0,
-			0
-		};
-
-		try
-		{
-			*outMesh = runtime.MeshStorage().Create(publicDesc, std::move(decodedBytes));
-		}
-		catch (const std::bad_alloc&)
-		{
-			return AssetSuite::Result::ErrorOutOfMemory;
-		}
-		catch (...)
-		{
-			return AssetSuite::Result::ErrorUnknown;
-		}
-
-		return AssetSuite::Result::Success;
-	}
-
 	AssetSuite::ErrorCode LoadRuntimeFileToMemory(
 		AssetSuite::Internal::RuntimeContext& runtime,
 		const std::filesystem::path& filePath,
@@ -387,7 +226,7 @@ AssetSuite::Result AssetSuite::DecodeImage(ContextHandle context, BlobHandle blo
 		return Result::ErrorInvalidHandle;
 	}
 
-	return DecodeImageBlob(context->Runtime(), *storedBlob, outImage);
+	return context->Runtime().DecodeImageBlob(*storedBlob, outImage);
 }
 
 AssetSuite::Result AssetSuite::DecodeImageFromFile(ContextHandle context, const char* filePath, ImageHandle* outImage)
@@ -414,7 +253,7 @@ AssetSuite::Result AssetSuite::DecodeImageFromFile(ContextHandle context, const 
 	try
 	{
 		Internal::Blob blob(std::move(rawBytes), Internal::MakeBlobSourceMetadata(filePath));
-		return DecodeImageBlob(context->Runtime(), blob, outImage);
+		return context->Runtime().DecodeImageBlob(blob, outImage);
 	}
 	catch (const std::bad_alloc&)
 	{
@@ -449,7 +288,7 @@ AssetSuite::Result AssetSuite::DecodeMesh(ContextHandle context, BlobHandle blob
 		return Result::ErrorInvalidHandle;
 	}
 
-	return DecodeMeshBlob(context->Runtime(), *storedBlob, outMesh);
+	return context->Runtime().DecodeMeshBlob(*storedBlob, outMesh);
 }
 
 AssetSuite::Result AssetSuite::DecodeMeshFromFile(ContextHandle context, const char* filePath, MeshHandle* outMesh)
@@ -476,7 +315,7 @@ AssetSuite::Result AssetSuite::DecodeMeshFromFile(ContextHandle context, const c
 	try
 	{
 		Internal::Blob blob(std::move(rawBytes), Internal::MakeBlobSourceMetadata(filePath));
-		return DecodeMeshBlob(context->Runtime(), blob, outMesh);
+		return context->Runtime().DecodeMeshBlob(blob, outMesh);
 	}
 	catch (const std::bad_alloc&)
 	{
