@@ -83,6 +83,33 @@ namespace
 
 		return currentDirectory;
 	}
+
+	class TestImageDecoder final : public AssetSuite::ImageDecoder
+	{
+	public:
+		bool Decode(std::vector<BYTE>& output, BYTE* buffer, AssetSuite::ImageDescriptor& descriptor) override
+		{
+			return true;
+		}
+	};
+
+	class TestMeshDecoder final : public AssetSuite::MeshDecoder
+	{
+	public:
+		bool Decode(std::vector<BYTE>& output, BYTE* buffer, AssetSuite::MeshDescriptor& descriptor) override
+		{
+			return true;
+		}
+	};
+
+	class TestImageEncoder final : public AssetSuite::ImageEncoder
+	{
+	public:
+		std::vector<BYTE> Encode(const std::vector<BYTE>& buffer, const AssetSuite::ImageDescriptor& descriptor) override
+		{
+			return buffer;
+		}
+	};
 }
 
 namespace GeneralUnitTests
@@ -728,9 +755,26 @@ namespace GeneralUnitTests
 			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
 
 			auto& registry = context->Runtime().CodecRegistry();
-			const std::vector<uint8_t> objBytes = { '#', ' ', 'm', 'e', 's', 'h', '\n', 'v', ' ', '0', ' ', '1', ' ', '2', '\n' };
+			const std::vector<uint8_t> objBytes = {
+				'#', ' ', 'm', 'e', 's', 'h', '\n',
+				'v', ' ', '0', ' ', '1', ' ', '2', '\n',
+				'f', ' ', '1', ' ', '1', ' ', '1', '\n'
+			};
 
 			Assert::AreEqual(true, AssetSuite::MeshDecoders::WAVEFRONT == registry.ProbeMeshDecoder(".asset", objBytes.data(), objBytes.size()));
+
+			DestroyContextForCleanup(context);
+		}
+
+		TEST_METHOD(RuntimeCodecRegistryRejectsObjLabelsWithoutGeometry)
+		{
+			AssetSuite::ContextHandle context = nullptr;
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+
+			auto& registry = context->Runtime().CodecRegistry();
+			const std::vector<uint8_t> objLabelBytes = { 'o', ' ', 'n', 'a', 'm', 'e', '\n', 'g', ' ', 'g', 'r', 'o', 'u', 'p', '\n' };
+
+			Assert::AreEqual(true, AssetSuite::MeshDecoders::Auto == registry.ProbeMeshDecoder(".asset", objLabelBytes.data(), objLabelBytes.size()));
 
 			DestroyContextForCleanup(context);
 		}
@@ -760,6 +804,27 @@ namespace GeneralUnitTests
 
 			Assert::IsNotNull(registry.FindImageEncoder(AssetSuite::AssetFormat::PPM));
 			Assert::IsNull(registry.FindImageEncoder(AssetSuite::AssetFormat::Unknown));
+
+			DestroyContextForCleanup(context);
+		}
+
+		TEST_METHOD(RuntimeCodecRegistryUsesLatestRegisteredImplementations)
+		{
+			AssetSuite::ContextHandle context = nullptr;
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+
+			auto& registry = context->Runtime().CodecRegistry();
+			TestImageDecoder imageDecoder;
+			TestMeshDecoder meshDecoder;
+			TestImageEncoder imageEncoder;
+
+			Assert::IsTrue(registry.RegisterImageDecoder(AssetSuite::ImageDecoders::BMP, imageDecoder));
+			Assert::IsTrue(registry.RegisterMeshDecoder(AssetSuite::MeshDecoders::WAVEFRONT, meshDecoder));
+			Assert::IsTrue(registry.RegisterImageEncoder(AssetSuite::AssetFormat::PPM, imageEncoder));
+
+			Assert::IsTrue(registry.FindImageDecoder(AssetSuite::ImageDecoders::BMP) == &imageDecoder);
+			Assert::IsTrue(registry.FindMeshDecoder(AssetSuite::MeshDecoders::WAVEFRONT) == &meshDecoder);
+			Assert::IsTrue(registry.FindImageEncoder(AssetSuite::AssetFormat::PPM) == &imageEncoder);
 
 			DestroyContextForCleanup(context);
 		}

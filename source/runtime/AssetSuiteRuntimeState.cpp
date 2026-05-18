@@ -134,6 +134,8 @@ namespace
 
 		const char* text = reinterpret_cast<const char*>(data);
 		size_t offset = 0;
+		bool hasVertex = false;
+		bool hasFace = false;
 		while (offset < size)
 		{
 			while (offset < size && (text[offset] == ' ' || text[offset] == '\t' || text[offset] == '\r' || text[offset] == '\n'))
@@ -154,15 +156,16 @@ namespace
 
 			const size_t lineLength = offset - lineStart;
 			const char* line = text + lineStart;
-			if (lineLength > 0 &&
-				(StartsWithToken(line, lineLength, "v") ||
-					StartsWithToken(line, lineLength, "vn") ||
-					StartsWithToken(line, lineLength, "vt") ||
-					StartsWithToken(line, lineLength, "f") ||
-					StartsWithToken(line, lineLength, "o") ||
-					StartsWithToken(line, lineLength, "g") ||
-					StartsWithToken(line, lineLength, "mtllib") ||
-					StartsWithToken(line, lineLength, "usemtl")))
+			if (StartsWithToken(line, lineLength, "v"))
+			{
+				hasVertex = true;
+			}
+			else if (StartsWithToken(line, lineLength, "f"))
+			{
+				hasFace = true;
+			}
+
+			if (hasVertex && hasFace)
 			{
 				return true;
 			}
@@ -708,13 +711,13 @@ AssetSuite::Internal::RuntimeState::CodecRegistry::FindImageDecoderRecord(ImageD
 		return nullptr;
 	}
 
-	for (const CodecRecord& record : records)
+	for (auto record = records.rbegin(); record != records.rend(); ++record)
 	{
-		if (record.assetKind == CodecRegistry::AssetKind::Image &&
-			(record.capabilities & static_cast<uint32_t>(CodecRegistry::Capability::Decode)) != 0 &&
-			record.imageDecoder == decoder)
+		if (record->assetKind == CodecRegistry::AssetKind::Image &&
+			(record->capabilities & static_cast<uint32_t>(CodecRegistry::Capability::Decode)) != 0 &&
+			record->imageDecoder == decoder)
 		{
-			return &record;
+			return &(*record);
 		}
 	}
 
@@ -729,13 +732,13 @@ AssetSuite::Internal::RuntimeState::CodecRegistry::FindMeshDecoderRecord(MeshDec
 		return nullptr;
 	}
 
-	for (const CodecRecord& record : records)
+	for (auto record = records.rbegin(); record != records.rend(); ++record)
 	{
-		if (record.assetKind == CodecRegistry::AssetKind::Mesh &&
-			(record.capabilities & static_cast<uint32_t>(CodecRegistry::Capability::Decode)) != 0 &&
-			record.meshDecoder == decoder)
+		if (record->assetKind == CodecRegistry::AssetKind::Mesh &&
+			(record->capabilities & static_cast<uint32_t>(CodecRegistry::Capability::Decode)) != 0 &&
+			record->meshDecoder == decoder)
 		{
-			return &record;
+			return &(*record);
 		}
 	}
 
@@ -750,13 +753,13 @@ AssetSuite::Internal::RuntimeState::CodecRegistry::FindImageEncoderRecord(AssetF
 		return nullptr;
 	}
 
-	for (const CodecRecord& record : records)
+	for (auto record = records.rbegin(); record != records.rend(); ++record)
 	{
-		if (record.assetKind == CodecRegistry::AssetKind::Image &&
-			(record.capabilities & static_cast<uint32_t>(CodecRegistry::Capability::Encode)) != 0 &&
-			record.format == format)
+		if (record->assetKind == CodecRegistry::AssetKind::Image &&
+			(record->capabilities & static_cast<uint32_t>(CodecRegistry::Capability::Encode)) != 0 &&
+			record->format == format)
 		{
-			return &record;
+			return &(*record);
 		}
 	}
 
