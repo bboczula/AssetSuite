@@ -402,7 +402,28 @@ AssetSuite::Result AssetSuite::DecodeImageFromFile(ContextHandle context, const 
 		return Result::ErrorInvalidArgument;
 	}
 
-	return Result::ErrorUnsupportedFormat;
+	std::vector<uint8_t> rawBytes;
+	const ErrorCode loadResult = LoadRuntimeFileToMemory(context->Runtime(), filePath, true, rawBytes);
+	const Result mappedResult = MapFileLoadResult(loadResult);
+	if (mappedResult != Result::Success)
+	{
+		context->Runtime().Diagnostics().Add(loadResult, "Failed to load image source file.");
+		return mappedResult;
+	}
+
+	try
+	{
+		Internal::Blob blob(std::move(rawBytes), Internal::MakeBlobSourceMetadata(filePath));
+		return DecodeImageBlob(context->Runtime(), blob, outImage);
+	}
+	catch (const std::bad_alloc&)
+	{
+		return Result::ErrorOutOfMemory;
+	}
+	catch (...)
+	{
+		return Result::ErrorUnknown;
+	}
 }
 
 AssetSuite::Result AssetSuite::DecodeMesh(ContextHandle context, BlobHandle blob, MeshHandle* outMesh)
@@ -443,7 +464,28 @@ AssetSuite::Result AssetSuite::DecodeMeshFromFile(ContextHandle context, const c
 		return Result::ErrorInvalidArgument;
 	}
 
-	return Result::ErrorUnsupportedFormat;
+	std::vector<uint8_t> rawBytes;
+	const ErrorCode loadResult = LoadRuntimeFileToMemory(context->Runtime(), filePath, true, rawBytes);
+	const Result mappedResult = MapFileLoadResult(loadResult);
+	if (mappedResult != Result::Success)
+	{
+		context->Runtime().Diagnostics().Add(loadResult, "Failed to load mesh source file.");
+		return mappedResult;
+	}
+
+	try
+	{
+		Internal::Blob blob(std::move(rawBytes), Internal::MakeBlobSourceMetadata(filePath));
+		return DecodeMeshBlob(context->Runtime(), blob, outMesh);
+	}
+	catch (const std::bad_alloc&)
+	{
+		return Result::ErrorOutOfMemory;
+	}
+	catch (...)
+	{
+		return Result::ErrorUnknown;
+	}
 }
 
 AssetSuite::Result AssetSuite::ReleaseBlob(ContextHandle context, BlobHandle* blob)

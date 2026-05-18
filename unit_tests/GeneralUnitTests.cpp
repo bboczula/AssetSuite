@@ -699,6 +699,55 @@ namespace GeneralUnitTests
 			DestroyContextForCleanup(firstContext);
 		}
 
+		TEST_METHOD(DecodeImageFromFileUsesSharedRoutingWithoutPersistingBlob)
+		{
+			AssetSuite::ContextHandle context = nullptr;
+			AssetSuite::ImageHandle image = nullptr;
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+
+			const auto result = AssetSuite::DecodeImageFromFile(context, "test_file.xyz", &image);
+
+			Assert::AreEqual(true, AssetSuite::Result::Success == result);
+			Assert::IsNotNull(image);
+			Assert::AreEqual(static_cast<size_t>(0), context->Runtime().BlobStorage().LiveCount());
+			Assert::AreEqual(static_cast<size_t>(1), context->Runtime().ImageStorage().LiveCount());
+			Assert::IsTrue(context->Runtime().ImageStorage().Owns(image));
+
+			DestroyContextForCleanup(context);
+		}
+
+		TEST_METHOD(DecodeMeshFromFileUsesSharedRoutingWithoutPersistingBlob)
+		{
+			AssetSuite::ContextHandle context = nullptr;
+			AssetSuite::MeshHandle mesh = nullptr;
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+
+			const auto result = AssetSuite::DecodeMeshFromFile(context, "test_mesh.obj", &mesh);
+
+			Assert::AreEqual(true, AssetSuite::Result::Success == result);
+			Assert::IsNotNull(mesh);
+			Assert::AreEqual(static_cast<size_t>(0), context->Runtime().BlobStorage().LiveCount());
+			Assert::AreEqual(static_cast<size_t>(1), context->Runtime().MeshStorage().LiveCount());
+			Assert::IsTrue(context->Runtime().MeshStorage().Owns(mesh));
+
+			DestroyContextForCleanup(context);
+		}
+
+		TEST_METHOD(DecodeFromFileMapsLoadFailures)
+		{
+			AssetSuite::ContextHandle context = nullptr;
+			AssetSuite::ImageHandle image = nullptr;
+			AssetSuite::MeshHandle mesh = nullptr;
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+
+			Assert::AreEqual(true, AssetSuite::Result::ErrorFileNotFound == AssetSuite::DecodeImageFromFile(context, "missing_decode_image.bmp", &image));
+			Assert::AreEqual(true, AssetSuite::Result::ErrorIoFailure == AssetSuite::DecodeMeshFromFile(context, std::filesystem::current_path().string().c_str(), &mesh));
+			Assert::IsNull(image);
+			Assert::IsNull(mesh);
+
+			DestroyContextForCleanup(context);
+		}
+
 		TEST_METHOD(BlobStorageReusesReleasedSlotsAndRejectsOldGenerations)
 		{
 			AssetSuite::ContextHandle context = nullptr;
