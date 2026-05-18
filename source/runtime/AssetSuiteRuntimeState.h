@@ -120,8 +120,10 @@ namespace AssetSuite::Internal
 
 			bool RegisterImageDecoder(ImageDecoders decoder, ImageDecoder& implementation);
 			bool RegisterMeshDecoder(MeshDecoders decoder, MeshDecoder& implementation);
+			bool RegisterImageEncoder(AssetFormat format, ImageEncoder& implementation);
 			ImageDecoder* FindImageDecoder(ImageDecoders decoder) const noexcept;
 			MeshDecoder* FindMeshDecoder(MeshDecoders decoder) const noexcept;
+			ImageEncoder* FindImageEncoder(AssetFormat format) const noexcept;
 			ImageDecoders ResolveImageDecoder(const std::filesystem::path& extension) const noexcept;
 			MeshDecoders ResolveMeshDecoder(const std::filesystem::path& extension) const noexcept;
 			const std::vector<CodecRecord>& Records() const noexcept;
@@ -129,6 +131,7 @@ namespace AssetSuite::Internal
 		private:
 			const CodecRecord* FindImageDecoderRecord(ImageDecoders decoder) const noexcept;
 			const CodecRecord* FindMeshDecoderRecord(MeshDecoders decoder) const noexcept;
+			const CodecRecord* FindImageEncoderRecord(AssetFormat format) const noexcept;
 
 			std::array<ImageDecoder*, static_cast<size_t>(ImageDecoders::MaxDecoders)> imageDecoders = {};
 			std::array<MeshDecoder*, static_cast<size_t>(MeshDecoders::MaxDecoders)> meshDecoders = {};

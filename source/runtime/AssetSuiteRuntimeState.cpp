@@ -152,6 +152,17 @@ namespace
 			return {};
 		}
 	}
+
+	std::vector<std::filesystem::path> ExtensionsForImageEncoder(AssetSuite::AssetFormat format)
+	{
+		switch (format)
+		{
+		case AssetSuite::AssetFormat::PPM:
+			return { ".ppm" };
+		default:
+			return {};
+		}
+	}
 }
 
 AssetSuite::Internal::RuntimeState::RuntimeState()
@@ -178,6 +189,7 @@ void AssetSuite::Internal::RuntimeState::CodecStorage::RegisterWith(CodecRegistr
 	registry.RegisterImageDecoder(ImageDecoders::BMP, *bmpDecoder);
 	registry.RegisterImageDecoder(ImageDecoders::PNG, *pngDecoder);
 	registry.RegisterMeshDecoder(MeshDecoders::WAVEFRONT, *modelLoader);
+	registry.RegisterImageEncoder(AssetFormat::PPM, *ppmEncoder);
 }
 
 void* AssetSuite::Internal::RuntimeState::AllocatorPolicy::Allocate(size_t size, size_t alignment)
@@ -462,6 +474,31 @@ bool AssetSuite::Internal::RuntimeState::CodecRegistry::RegisterMeshDecoder(
 	return true;
 }
 
+bool AssetSuite::Internal::RuntimeState::CodecRegistry::RegisterImageEncoder(
+	AssetFormat format,
+	ImageEncoder& implementation)
+{
+	if (format == AssetFormat::Unknown)
+	{
+		return false;
+	}
+
+	records.push_back(
+		{
+			CodecRegistry::AssetKind::Image,
+			static_cast<uint32_t>(CodecRegistry::Capability::Encode),
+			format,
+			ImageDecoders::Auto,
+			MeshDecoders::Auto,
+			ExtensionsForImageEncoder(format),
+			nullptr,
+			nullptr,
+			nullptr,
+			&implementation
+		});
+	return true;
+}
+
 AssetSuite::ImageDecoder* AssetSuite::Internal::RuntimeState::CodecRegistry::FindImageDecoder(
 	ImageDecoders decoder) const noexcept
 {
@@ -484,6 +521,13 @@ AssetSuite::MeshDecoder* AssetSuite::Internal::RuntimeState::CodecRegistry::Find
 
 	const CodecRecord* record = FindMeshDecoderRecord(decoder);
 	return record ? record->meshDecoderImplementation : nullptr;
+}
+
+AssetSuite::ImageEncoder* AssetSuite::Internal::RuntimeState::CodecRegistry::FindImageEncoder(
+	AssetFormat format) const noexcept
+{
+	const CodecRecord* record = FindImageEncoderRecord(format);
+	return record ? record->imageEncoderImplementation : nullptr;
 }
 
 AssetSuite::ImageDecoders AssetSuite::Internal::RuntimeState::CodecRegistry::ResolveImageDecoder(
@@ -560,6 +604,27 @@ AssetSuite::Internal::RuntimeState::CodecRegistry::FindMeshDecoderRecord(MeshDec
 		if (record.assetKind == CodecRegistry::AssetKind::Mesh &&
 			(record.capabilities & static_cast<uint32_t>(CodecRegistry::Capability::Decode)) != 0 &&
 			record.meshDecoder == decoder)
+		{
+			return &record;
+		}
+	}
+
+	return nullptr;
+}
+
+const AssetSuite::Internal::RuntimeState::CodecRegistry::CodecRecord*
+AssetSuite::Internal::RuntimeState::CodecRegistry::FindImageEncoderRecord(AssetFormat format) const noexcept
+{
+	if (format == AssetFormat::Unknown)
+	{
+		return nullptr;
+	}
+
+	for (const CodecRecord& record : records)
+	{
+		if (record.assetKind == CodecRegistry::AssetKind::Image &&
+			(record.capabilities & static_cast<uint32_t>(CodecRegistry::Capability::Encode)) != 0 &&
+			record.format == format)
 		{
 			return &record;
 		}
