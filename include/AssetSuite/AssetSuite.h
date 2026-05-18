@@ -55,6 +55,56 @@ namespace AssetSuite
 	// return Result::ErrorIoFailure.
 	ASSET_SUITE_API Result LoadFile(ContextHandle context, const char* filePath, BlobHandle* outBlob);
 
+	// Decodes a runtime-owned blob into a runtime-owned image. outImage must
+	// point to a null handle and receives the created image handle on success.
+	// The source blob remains owned by the context and is not released by this
+	// call.
+	//
+	// Passing a null context returns Result::ErrorInvalidContext. Passing an
+	// invalid blob handle, including a handle from another context, returns
+	// Result::ErrorInvalidHandle. Passing a null outImage or non-null
+	// *outImage returns Result::ErrorInvalidArgument. Inputs that cannot be
+	// routed to a registered image codec return
+	// Result::ErrorUnsupportedFormat. Recognized but malformed image bytes
+	// return Result::ErrorMalformedData where the selected codec can
+	// distinguish malformed input.
+	ASSET_SUITE_API Result DecodeImage(ContextHandle context, BlobHandle blob, ImageHandle* outImage);
+
+	// Loads a file and decodes it into a runtime-owned image using the same
+	// runtime probing and codec invocation path as DecodeImage. The temporary
+	// file bytes are owned only for the duration of this call.
+	ASSET_SUITE_API Result DecodeImageFromFile(ContextHandle context, const char* filePath, ImageHandle* outImage);
+
+	// Decodes a runtime-owned blob into a runtime-owned mesh. Ownership,
+	// validation, probing, and error mapping follow DecodeImage.
+	ASSET_SUITE_API Result DecodeMesh(ContextHandle context, BlobHandle blob, MeshHandle* outMesh);
+
+	// Loads a file and decodes it into a runtime-owned mesh using the same
+	// runtime probing and codec invocation path as DecodeMesh. The temporary
+	// file bytes are owned only for the duration of this call.
+	ASSET_SUITE_API Result DecodeMeshFromFile(ContextHandle context, const char* filePath, MeshHandle* outMesh);
+
+	// Writes the descriptor for a runtime-owned image handle. Passing a null
+	// context returns Result::ErrorInvalidContext. Passing a null outDesc
+	// returns Result::ErrorInvalidArgument. Passing a null, stale, or
+	// foreign-context image handle returns Result::ErrorInvalidHandle.
+	ASSET_SUITE_API Result GetImageDesc(ContextHandle context, ImageHandle image, ImageDesc* outDesc);
+
+	// Writes the descriptor for a runtime-owned mesh handle. Validation and
+	// result mapping follow GetImageDesc.
+	ASSET_SUITE_API Result GetMeshDesc(ContextHandle context, MeshHandle mesh, MeshDesc* outDesc);
+
+	// Releases a runtime-owned image handle and sets the caller's handle to
+	// nullptr on success. Passing a null context returns
+	// Result::ErrorInvalidContext. Passing nullptr, a pointer to a null image
+	// handle, a stale handle, or a handle from another context returns
+	// Result::ErrorInvalidHandle.
+	ASSET_SUITE_API Result ReleaseImage(ContextHandle context, ImageHandle* image);
+
+	// Releases a runtime-owned mesh handle and sets the caller's handle to
+	// nullptr on success. Validation and result mapping follow ReleaseImage.
+	ASSET_SUITE_API Result ReleaseMesh(ContextHandle context, MeshHandle* mesh);
+
 	// Releases a runtime-owned blob and sets the caller's handle to nullptr on
 	// success. Memory and metadata behind the blob are invalid immediately
 	// after a successful release.

@@ -24,6 +24,18 @@ namespace AssetSuite
 	class PngDecoder;
 	class PpmEncoder;
 	class BypassEncoder;
+
+	struct AssetSuiteImage_t
+	{
+		ImageDesc desc = {};
+		std::vector<uint8_t> bytes;
+	};
+
+	struct AssetSuiteMesh_t
+	{
+		MeshDesc desc = {};
+		std::vector<uint8_t> bytes;
+	};
 }
 
 namespace AssetSuite::Internal
@@ -86,6 +98,30 @@ namespace AssetSuite::Internal
 			uint32_t contextId = 0;
 			std::vector<Slot> slots;
 			std::vector<size_t> freeSlots;
+		};
+
+		struct ImageStorage
+		{
+			ImageHandle Create(ImageDesc desc, std::vector<uint8_t> bytes);
+			bool Owns(ImageHandle image) const noexcept;
+			const AssetSuiteImage_t* Get(ImageHandle image) const noexcept;
+			Result Release(ImageHandle* image) noexcept;
+			size_t LiveCount() const noexcept;
+
+		private:
+			std::vector<std::unique_ptr<AssetSuiteImage_t>> images;
+		};
+
+		struct MeshStorage
+		{
+			MeshHandle Create(MeshDesc desc, std::vector<uint8_t> bytes);
+			bool Owns(MeshHandle mesh) const noexcept;
+			const AssetSuiteMesh_t* Get(MeshHandle mesh) const noexcept;
+			Result Release(MeshHandle* mesh) noexcept;
+			size_t LiveCount() const noexcept;
+
+		private:
+			std::vector<std::unique_ptr<AssetSuiteMesh_t>> meshes;
 		};
 
 		struct CodecRegistry
@@ -193,6 +229,8 @@ namespace AssetSuite::Internal
 		Diagnostics diagnostics;
 		FileLoader fileLoader;
 		BlobStorage blobStorage;
+		ImageStorage imageStorage;
+		MeshStorage meshStorage;
 		CodecRegistry codecRegistry;
 	};
 }

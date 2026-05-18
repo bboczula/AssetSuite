@@ -2,6 +2,7 @@
 #include <CppUnitTest.h>
 
 #include <cstdint>
+#include <fstream>
 #include <filesystem>
 #include <utility>
 #include <vector>
@@ -82,6 +83,12 @@ namespace
 		}
 
 		return currentDirectory;
+	}
+
+	void WriteBinaryFile(const std::filesystem::path& path, const std::vector<uint8_t>& bytes)
+	{
+		std::ofstream file(path, std::ios::binary | std::ios::trunc);
+		file.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
 	}
 
 	class TestImageDecoder final : public AssetSuite::ImageDecoder
@@ -199,6 +206,7 @@ namespace GeneralUnitTests
 			AssertResultString(AssetSuite::Result::ErrorInvalidContext, "Error: invalid context");
 			AssertResultString(AssetSuite::Result::ErrorInvalidHandle, "Error: invalid handle");
 			AssertResultString(AssetSuite::Result::ErrorIoFailure, "Error: IO failure");
+			AssertResultString(AssetSuite::Result::ErrorMalformedData, "Error: malformed data");
 			AssertResultString(AssetSuite::Result::ErrorUnknown, "Error: unknown");
 		}
 
@@ -634,6 +642,204 @@ namespace GeneralUnitTests
 			DestroyContextForCleanup(firstContext);
 		}
 
+		TEST_METHOD(DecodeImageUsesRuntimeBlobAndStoresImageHandle)
+		{
+			AssetSuite::ContextHandle context = nullptr;
+			AssetSuite::BlobHandle blob = nullptr;
+			AssetSuite::ImageHandle image = nullptr;
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::LoadFile(context, "test_file.xyz", &blob));
+
+			const auto result = AssetSuite::DecodeImage(context, blob, &image);
+
+			Assert::AreEqual(true, AssetSuite::Result::Success == result);
+			Assert::IsNotNull(image);
+			Assert::AreEqual(static_cast<size_t>(1), context->Runtime().ImageStorage().LiveCount());
+			Assert::IsTrue(context->Runtime().ImageStorage().Owns(image));
+			Assert::AreEqual(true, AssetSuite::PixelFormat::RGB8 == context->Runtime().ImageStorage().Get(image)->desc.format);
+
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::ReleaseBlob(context, &blob));
+			DestroyContextForCleanup(context);
+		}
+
+		TEST_METHOD(DecodeMeshUsesRuntimeBlobAndStoresMeshHandle)
+		{
+			AssetSuite::ContextHandle context = nullptr;
+			AssetSuite::BlobHandle blob = nullptr;
+			AssetSuite::MeshHandle mesh = nullptr;
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::LoadFile(context, "test_mesh.obj", &blob));
+
+			const auto result = AssetSuite::DecodeMesh(context, blob, &mesh);
+
+			Assert::AreEqual(true, AssetSuite::Result::Success == result);
+			Assert::IsNotNull(mesh);
+			Assert::AreEqual(static_cast<size_t>(1), context->Runtime().MeshStorage().LiveCount());
+			Assert::IsTrue(context->Runtime().MeshStorage().Owns(mesh));
+
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::ReleaseBlob(context, &blob));
+			DestroyContextForCleanup(context);
+		}
+
+		TEST_METHOD(DecodeBlobRejectsInvalidHandlesAndUnsupportedFormats)
+		{
+			AssetSuite::ContextHandle firstContext = nullptr;
+			AssetSuite::ContextHandle secondContext = nullptr;
+			AssetSuite::BlobHandle firstBlob = nullptr;
+			AssetSuite::BlobHandle meshBlob = nullptr;
+			AssetSuite::ImageHandle image = nullptr;
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &firstContext));
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &secondContext));
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::LoadFile(firstContext, "test_file.xyz", &firstBlob));
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::LoadFile(firstContext, "test_mesh.obj", &meshBlob));
+
+			Assert::AreEqual(true, AssetSuite::Result::ErrorInvalidContext == AssetSuite::DecodeImage(nullptr, firstBlob, &image));
+			Assert::AreEqual(true, AssetSuite::Result::ErrorInvalidHandle == AssetSuite::DecodeImage(firstContext, nullptr, &image));
+			Assert::AreEqual(true, AssetSuite::Result::ErrorInvalidArgument == AssetSuite::DecodeImage(firstContext, firstBlob, nullptr));
+			Assert::AreEqual(true, AssetSuite::Result::ErrorInvalidHandle == AssetSuite::DecodeImage(secondContext, firstBlob, &image));
+			Assert::AreEqual(true, AssetSuite::Result::ErrorUnsupportedFormat == AssetSuite::DecodeImage(firstContext, meshBlob, &image));
+			Assert::IsNull(image);
+
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::ReleaseBlob(firstContext, &meshBlob));
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::ReleaseBlob(firstContext, &firstBlob));
+			DestroyContextForCleanup(secondContext);
+			DestroyContextForCleanup(firstContext);
+		}
+
+		TEST_METHOD(DecodeImageFromFileUsesSharedRoutingWithoutPersistingBlob)
+		{
+			AssetSuite::ContextHandle context = nullptr;
+			AssetSuite::ImageHandle image = nullptr;
+			AssetSuite::ImageDesc imageDesc = {};
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+
+			const auto result = AssetSuite::DecodeImageFromFile(context, "test_file.xyz", &image);
+
+			Assert::AreEqual(true, AssetSuite::Result::Success == result);
+			Assert::IsNotNull(image);
+			Assert::AreEqual(static_cast<size_t>(0), context->Runtime().BlobStorage().LiveCount());
+			Assert::AreEqual(static_cast<size_t>(1), context->Runtime().ImageStorage().LiveCount());
+			Assert::IsTrue(context->Runtime().ImageStorage().Owns(image));
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::GetImageDesc(context, image, &imageDesc));
+			Assert::AreEqual(true, AssetSuite::PixelFormat::RGB8 == imageDesc.format);
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::ReleaseImage(context, &image));
+			Assert::IsNull(image);
+			Assert::AreEqual(static_cast<size_t>(0), context->Runtime().ImageStorage().LiveCount());
+
+			DestroyContextForCleanup(context);
+		}
+
+		TEST_METHOD(DecodeMeshFromFileUsesSharedRoutingWithoutPersistingBlob)
+		{
+			AssetSuite::ContextHandle context = nullptr;
+			AssetSuite::MeshHandle mesh = nullptr;
+			AssetSuite::MeshDesc meshDesc = {};
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+
+			const auto result = AssetSuite::DecodeMeshFromFile(context, "test_mesh.obj", &mesh);
+
+			Assert::AreEqual(true, AssetSuite::Result::Success == result);
+			Assert::IsNotNull(mesh);
+			Assert::AreEqual(static_cast<size_t>(0), context->Runtime().BlobStorage().LiveCount());
+			Assert::AreEqual(static_cast<size_t>(1), context->Runtime().MeshStorage().LiveCount());
+			Assert::IsTrue(context->Runtime().MeshStorage().Owns(mesh));
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::GetMeshDesc(context, mesh, &meshDesc));
+			Assert::AreEqual(static_cast<uint32_t>(sizeof(AssetSuite::MeshDesc)), meshDesc.structSize);
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::ReleaseMesh(context, &mesh));
+			Assert::IsNull(mesh);
+			Assert::AreEqual(static_cast<size_t>(0), context->Runtime().MeshStorage().LiveCount());
+
+			DestroyContextForCleanup(context);
+		}
+
+		TEST_METHOD(DecodedHandleApisValidateContextOutputsAndOwnership)
+		{
+			AssetSuite::ContextHandle firstContext = nullptr;
+			AssetSuite::ContextHandle secondContext = nullptr;
+			AssetSuite::ImageHandle image = nullptr;
+			AssetSuite::MeshHandle mesh = nullptr;
+			AssetSuite::ImageDesc imageDesc = {};
+			AssetSuite::MeshDesc meshDesc = {};
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &firstContext));
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &secondContext));
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::DecodeImageFromFile(firstContext, "test_file.xyz", &image));
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::DecodeMeshFromFile(firstContext, "test_mesh.obj", &mesh));
+
+			Assert::AreEqual(true, AssetSuite::Result::ErrorInvalidContext == AssetSuite::GetImageDesc(nullptr, image, &imageDesc));
+			Assert::AreEqual(true, AssetSuite::Result::ErrorInvalidArgument == AssetSuite::GetImageDesc(firstContext, image, nullptr));
+			Assert::AreEqual(true, AssetSuite::Result::ErrorInvalidHandle == AssetSuite::GetImageDesc(secondContext, image, &imageDesc));
+			Assert::AreEqual(true, AssetSuite::Result::ErrorInvalidContext == AssetSuite::ReleaseMesh(nullptr, &mesh));
+			Assert::AreEqual(true, AssetSuite::Result::ErrorInvalidHandle == AssetSuite::ReleaseImage(secondContext, &image));
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::GetMeshDesc(firstContext, mesh, &meshDesc));
+
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::ReleaseMesh(firstContext, &mesh));
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::ReleaseImage(firstContext, &image));
+			Assert::AreEqual(true, AssetSuite::Result::ErrorInvalidHandle == AssetSuite::ReleaseMesh(firstContext, &mesh));
+			Assert::AreEqual(true, AssetSuite::Result::ErrorInvalidHandle == AssetSuite::GetImageDesc(firstContext, image, &imageDesc));
+
+			DestroyContextForCleanup(secondContext);
+			DestroyContextForCleanup(firstContext);
+		}
+
+		TEST_METHOD(DecodeFromFileMapsLoadFailures)
+		{
+			AssetSuite::ContextHandle context = nullptr;
+			AssetSuite::ImageHandle image = nullptr;
+			AssetSuite::MeshHandle mesh = nullptr;
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+
+			Assert::AreEqual(true, AssetSuite::Result::ErrorFileNotFound == AssetSuite::DecodeImageFromFile(context, "missing_decode_image.bmp", &image));
+			Assert::AreEqual(true, AssetSuite::Result::ErrorIoFailure == AssetSuite::DecodeMeshFromFile(context, std::filesystem::current_path().string().c_str(), &mesh));
+			Assert::IsNull(image);
+			Assert::IsNull(mesh);
+
+			DestroyContextForCleanup(context);
+		}
+
+		TEST_METHOD(DecodeImageMapsMalformedRecognizedDataConsistently)
+		{
+			const std::filesystem::path malformedImagePath = "malformed_decode_image.bmp";
+			WriteBinaryFile(malformedImagePath, { 'B', 'M' });
+
+			AssetSuite::ContextHandle context = nullptr;
+			AssetSuite::BlobHandle blob = nullptr;
+			AssetSuite::ImageHandle blobImage = nullptr;
+			AssetSuite::ImageHandle fileImage = nullptr;
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::LoadFile(context, malformedImagePath.string().c_str(), &blob));
+
+			Assert::AreEqual(true, AssetSuite::Result::ErrorMalformedData == AssetSuite::DecodeImage(context, blob, &blobImage));
+			Assert::AreEqual(true, AssetSuite::Result::ErrorMalformedData == AssetSuite::DecodeImageFromFile(context, malformedImagePath.string().c_str(), &fileImage));
+			Assert::IsNull(blobImage);
+			Assert::IsNull(fileImage);
+
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::ReleaseBlob(context, &blob));
+			DestroyContextForCleanup(context);
+			std::filesystem::remove(malformedImagePath);
+		}
+
+		TEST_METHOD(DecodeMeshMapsMalformedRecognizedDataConsistently)
+		{
+			const std::filesystem::path malformedMeshPath = "malformed_decode_mesh.obj";
+			WriteBinaryFile(malformedMeshPath, {});
+
+			AssetSuite::ContextHandle context = nullptr;
+			AssetSuite::BlobHandle blob = nullptr;
+			AssetSuite::MeshHandle blobMesh = nullptr;
+			AssetSuite::MeshHandle fileMesh = nullptr;
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::LoadFile(context, malformedMeshPath.string().c_str(), &blob));
+
+			Assert::AreEqual(true, AssetSuite::Result::ErrorMalformedData == AssetSuite::DecodeMesh(context, blob, &blobMesh));
+			Assert::AreEqual(true, AssetSuite::Result::ErrorMalformedData == AssetSuite::DecodeMeshFromFile(context, malformedMeshPath.string().c_str(), &fileMesh));
+			Assert::IsNull(blobMesh);
+			Assert::IsNull(fileMesh);
+
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::ReleaseBlob(context, &blob));
+			DestroyContextForCleanup(context);
+			std::filesystem::remove(malformedMeshPath);
+		}
+
 		TEST_METHOD(BlobStorageReusesReleasedSlotsAndRejectsOldGenerations)
 		{
 			AssetSuite::ContextHandle context = nullptr;
@@ -699,6 +905,37 @@ namespace GeneralUnitTests
 			Assert::IsFalse(registry.RegisterImageDecoder(AssetSuite::ImageDecoders::MaxDecoders, *imageDecoder));
 			Assert::IsFalse(registry.RegisterMeshDecoder(AssetSuite::MeshDecoders::Auto, *meshDecoder));
 			Assert::IsFalse(registry.RegisterMeshDecoder(AssetSuite::MeshDecoders::MaxDecoders, *meshDecoder));
+
+			DestroyContextForCleanup(context);
+		}
+
+		TEST_METHOD(RuntimeStoresDecodedImageAndMeshHandlesPerContext)
+		{
+			AssetSuite::ContextHandle context = nullptr;
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+
+			AssetSuite::ImageDesc imageDesc = { sizeof(AssetSuite::ImageDesc), 2, 3, AssetSuite::PixelFormat::RGBA8, 1, 1 };
+			AssetSuite::MeshDesc meshDesc = {
+				sizeof(AssetSuite::MeshDesc),
+				4,
+				6,
+				1,
+				static_cast<uint32_t>(AssetSuite::MeshAttributeFlags::Position)
+			};
+			std::vector<uint8_t> imageBytes = { 1, 2, 3, 4 };
+			std::vector<uint8_t> meshBytes = { 5, 6, 7, 8 };
+
+			AssetSuite::ImageHandle image = context->Runtime().ImageStorage().Create(imageDesc, std::move(imageBytes));
+			AssetSuite::MeshHandle mesh = context->Runtime().MeshStorage().Create(meshDesc, std::move(meshBytes));
+
+			Assert::IsNotNull(image);
+			Assert::IsNotNull(mesh);
+			Assert::IsTrue(context->Runtime().ImageStorage().Owns(image));
+			Assert::IsTrue(context->Runtime().MeshStorage().Owns(mesh));
+			Assert::AreEqual(static_cast<size_t>(1), context->Runtime().ImageStorage().LiveCount());
+			Assert::AreEqual(static_cast<size_t>(1), context->Runtime().MeshStorage().LiveCount());
+			Assert::AreEqual(static_cast<uint32_t>(2), context->Runtime().ImageStorage().Get(image)->desc.width);
+			Assert::AreEqual(static_cast<uint32_t>(4), context->Runtime().MeshStorage().Get(mesh)->desc.vertexCount);
 
 			DestroyContextForCleanup(context);
 		}

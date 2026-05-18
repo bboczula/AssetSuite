@@ -25,8 +25,14 @@ namespace AssetSuite::Internal
 		RuntimeState::FileLoader& FileLoader() noexcept;
 		RuntimeState::BlobStorage& BlobStorage() noexcept;
 		const RuntimeState::BlobStorage& BlobStorage() const noexcept;
+		RuntimeState::ImageStorage& ImageStorage() noexcept;
+		const RuntimeState::ImageStorage& ImageStorage() const noexcept;
+		RuntimeState::MeshStorage& MeshStorage() noexcept;
+		const RuntimeState::MeshStorage& MeshStorage() const noexcept;
 		RuntimeState::CodecRegistry& CodecRegistry() noexcept;
 		const RuntimeState::CodecRegistry& CodecRegistry() const noexcept;
+		Result DecodeImageBlob(const Blob& blob, ImageHandle* outImage);
+		Result DecodeMeshBlob(const Blob& blob, MeshHandle* outMesh);
 
 		void SetLoggingCallback(LoggingCallback callback, LogLevel minimumLevel, void* userData) noexcept;
 		void DispatchLogEvent(LogLevel level, const char* message) const;

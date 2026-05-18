@@ -114,6 +114,8 @@ const char* AssetSuite::GetResultString(Result result)
 		return "Error: invalid handle";
 	case Result::ErrorIoFailure:
 		return "Error: IO failure";
+	case Result::ErrorMalformedData:
+		return "Error: malformed data";
 	case Result::ErrorUnknown:
 		return "Error: unknown";
 	default:
@@ -199,6 +201,194 @@ AssetSuite::Result AssetSuite::LoadFile(ContextHandle context, const char* fileP
 	}
 
 	return Result::Success;
+}
+
+AssetSuite::Result AssetSuite::DecodeImage(ContextHandle context, BlobHandle blob, ImageHandle* outImage)
+{
+	if (!context)
+	{
+		return Result::ErrorInvalidContext;
+	}
+
+	if (!blob)
+	{
+		return Result::ErrorInvalidHandle;
+	}
+
+	if (!outImage || *outImage)
+	{
+		return Result::ErrorInvalidArgument;
+	}
+
+	const Internal::Blob* storedBlob = context->Runtime().BlobStorage().Get(blob);
+	if (!storedBlob)
+	{
+		return Result::ErrorInvalidHandle;
+	}
+
+	return context->Runtime().DecodeImageBlob(*storedBlob, outImage);
+}
+
+AssetSuite::Result AssetSuite::DecodeImageFromFile(ContextHandle context, const char* filePath, ImageHandle* outImage)
+{
+	if (!context)
+	{
+		return Result::ErrorInvalidContext;
+	}
+
+	if (!filePath || !outImage || *outImage)
+	{
+		return Result::ErrorInvalidArgument;
+	}
+
+	std::vector<uint8_t> rawBytes;
+	const ErrorCode loadResult = LoadRuntimeFileToMemory(context->Runtime(), filePath, true, rawBytes);
+	const Result mappedResult = MapFileLoadResult(loadResult);
+	if (mappedResult != Result::Success)
+	{
+		context->Runtime().Diagnostics().Add(loadResult, "Failed to load image source file.");
+		return mappedResult;
+	}
+
+	try
+	{
+		Internal::Blob blob(std::move(rawBytes), Internal::MakeBlobSourceMetadata(filePath));
+		return context->Runtime().DecodeImageBlob(blob, outImage);
+	}
+	catch (const std::bad_alloc&)
+	{
+		return Result::ErrorOutOfMemory;
+	}
+	catch (...)
+	{
+		return Result::ErrorUnknown;
+	}
+}
+
+AssetSuite::Result AssetSuite::DecodeMesh(ContextHandle context, BlobHandle blob, MeshHandle* outMesh)
+{
+	if (!context)
+	{
+		return Result::ErrorInvalidContext;
+	}
+
+	if (!blob)
+	{
+		return Result::ErrorInvalidHandle;
+	}
+
+	if (!outMesh || *outMesh)
+	{
+		return Result::ErrorInvalidArgument;
+	}
+
+	const Internal::Blob* storedBlob = context->Runtime().BlobStorage().Get(blob);
+	if (!storedBlob)
+	{
+		return Result::ErrorInvalidHandle;
+	}
+
+	return context->Runtime().DecodeMeshBlob(*storedBlob, outMesh);
+}
+
+AssetSuite::Result AssetSuite::DecodeMeshFromFile(ContextHandle context, const char* filePath, MeshHandle* outMesh)
+{
+	if (!context)
+	{
+		return Result::ErrorInvalidContext;
+	}
+
+	if (!filePath || !outMesh || *outMesh)
+	{
+		return Result::ErrorInvalidArgument;
+	}
+
+	std::vector<uint8_t> rawBytes;
+	const ErrorCode loadResult = LoadRuntimeFileToMemory(context->Runtime(), filePath, true, rawBytes);
+	const Result mappedResult = MapFileLoadResult(loadResult);
+	if (mappedResult != Result::Success)
+	{
+		context->Runtime().Diagnostics().Add(loadResult, "Failed to load mesh source file.");
+		return mappedResult;
+	}
+
+	try
+	{
+		Internal::Blob blob(std::move(rawBytes), Internal::MakeBlobSourceMetadata(filePath));
+		return context->Runtime().DecodeMeshBlob(blob, outMesh);
+	}
+	catch (const std::bad_alloc&)
+	{
+		return Result::ErrorOutOfMemory;
+	}
+	catch (...)
+	{
+		return Result::ErrorUnknown;
+	}
+}
+
+AssetSuite::Result AssetSuite::GetImageDesc(ContextHandle context, ImageHandle image, ImageDesc* outDesc)
+{
+	if (!context)
+	{
+		return Result::ErrorInvalidContext;
+	}
+
+	if (!outDesc)
+	{
+		return Result::ErrorInvalidArgument;
+	}
+
+	const AssetSuiteImage_t* storedImage = context->Runtime().ImageStorage().Get(image);
+	if (!storedImage)
+	{
+		return Result::ErrorInvalidHandle;
+	}
+
+	*outDesc = storedImage->desc;
+	return Result::Success;
+}
+
+AssetSuite::Result AssetSuite::GetMeshDesc(ContextHandle context, MeshHandle mesh, MeshDesc* outDesc)
+{
+	if (!context)
+	{
+		return Result::ErrorInvalidContext;
+	}
+
+	if (!outDesc)
+	{
+		return Result::ErrorInvalidArgument;
+	}
+
+	const AssetSuiteMesh_t* storedMesh = context->Runtime().MeshStorage().Get(mesh);
+	if (!storedMesh)
+	{
+		return Result::ErrorInvalidHandle;
+	}
+
+	*outDesc = storedMesh->desc;
+	return Result::Success;
+}
+
+AssetSuite::Result AssetSuite::ReleaseImage(ContextHandle context, ImageHandle* image)
+{
+	if (!context)
+	{
+		return Result::ErrorInvalidContext;
+	}
+
+	return context->Runtime().ImageStorage().Release(image);
+}
+
+AssetSuite::Result AssetSuite::ReleaseMesh(ContextHandle context, MeshHandle* mesh)
+{
+	if (!context)
+	{
+		return Result::ErrorInvalidContext;
+	}
+
+	return context->Runtime().MeshStorage().Release(mesh);
 }
 
 AssetSuite::Result AssetSuite::ReleaseBlob(ContextHandle context, BlobHandle* blob)

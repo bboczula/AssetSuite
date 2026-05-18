@@ -17,6 +17,7 @@ The public headers are provided under `include/AssetSuite` and are installed und
 - `AssetSuite::Result` and `AssetSuite::Version`
 - `AssetSuite::GetVersion` and `AssetSuite::GetResultString`
 - `AssetSuite::LogLevel`, `AssetSuite::LoggingCallback`, and `AssetSuite::SetLoggingCallback`
+- file and blob decode entry points for image and mesh assets
 - opaque handle types such as `AssetSuite::ContextHandle`, `AssetSuite::BlobHandle`, `AssetSuite::ImageHandle`, and `AssetSuite::MeshHandle`
 - plain descriptor structs such as `AssetSuite::ContextDesc`, `AssetSuite::BlobDesc`, `AssetSuite::ImageDesc`, and `AssetSuite::MeshDesc`
 - SDK enums such as `AssetSuite::AssetFormat`, `AssetSuite::PixelFormat`, and `AssetSuite::MeshAttributeFlags`
@@ -64,6 +65,23 @@ of `userData`, does not interpret it, and does not manage its lifetime. The
 message pointer is valid only for the duration of the callback invocation.
 Callback invocation follows the same external synchronization expectations as
 other operations on the context.
+
+## Decode Error Contract
+
+Image and mesh decode entry points use shared runtime probing before invoking a
+codec. If no registered codec can be selected for the supplied bytes and
+source metadata, the public result is `AssetSuite::Result::ErrorUnsupportedFormat`.
+
+Once a codec is selected, malformed source bytes are reported as
+`AssetSuite::Result::ErrorMalformedData` when the runtime can classify the
+failure as input corruption.
+
+Blob decode entry points preserve the caller's source `AssetSuite::BlobHandle`.
+File decode entry points use the same runtime route after loading file bytes,
+but their temporary source blob is not exposed or retained after the call.
+Decoded image and mesh handles can be inspected through their descriptor APIs
+and must be released with `AssetSuite::ReleaseImage` or
+`AssetSuite::ReleaseMesh`.
 
 ## Usage
 
