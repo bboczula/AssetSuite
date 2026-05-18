@@ -25,6 +25,10 @@ namespace AssetSuite::Internal
 		RuntimeState::FileLoader& FileLoader() noexcept;
 		RuntimeState::BlobStorage& BlobStorage() noexcept;
 		const RuntimeState::BlobStorage& BlobStorage() const noexcept;
+		RuntimeState::ImageStorage& ImageStorage() noexcept;
+		const RuntimeState::ImageStorage& ImageStorage() const noexcept;
+		RuntimeState::MeshStorage& MeshStorage() noexcept;
+		const RuntimeState::MeshStorage& MeshStorage() const noexcept;
 		RuntimeState::CodecRegistry& CodecRegistry() noexcept;
 		const RuntimeState::CodecRegistry& CodecRegistry() const noexcept;
 

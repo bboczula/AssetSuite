@@ -704,6 +704,37 @@ namespace GeneralUnitTests
 			DestroyContextForCleanup(context);
 		}
 
+		TEST_METHOD(RuntimeStoresDecodedImageAndMeshHandlesPerContext)
+		{
+			AssetSuite::ContextHandle context = nullptr;
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+
+			AssetSuite::ImageDesc imageDesc = { sizeof(AssetSuite::ImageDesc), 2, 3, AssetSuite::PixelFormat::RGBA8, 1, 1 };
+			AssetSuite::MeshDesc meshDesc = {
+				sizeof(AssetSuite::MeshDesc),
+				4,
+				6,
+				1,
+				static_cast<uint32_t>(AssetSuite::MeshAttributeFlags::Position)
+			};
+			std::vector<uint8_t> imageBytes = { 1, 2, 3, 4 };
+			std::vector<uint8_t> meshBytes = { 5, 6, 7, 8 };
+
+			AssetSuite::ImageHandle image = context->Runtime().ImageStorage().Create(imageDesc, std::move(imageBytes));
+			AssetSuite::MeshHandle mesh = context->Runtime().MeshStorage().Create(meshDesc, std::move(meshBytes));
+
+			Assert::IsNotNull(image);
+			Assert::IsNotNull(mesh);
+			Assert::IsTrue(context->Runtime().ImageStorage().Owns(image));
+			Assert::IsTrue(context->Runtime().MeshStorage().Owns(mesh));
+			Assert::AreEqual(static_cast<size_t>(1), context->Runtime().ImageStorage().LiveCount());
+			Assert::AreEqual(static_cast<size_t>(1), context->Runtime().MeshStorage().LiveCount());
+			Assert::AreEqual(static_cast<uint32_t>(2), context->Runtime().ImageStorage().Get(image)->desc.width);
+			Assert::AreEqual(static_cast<uint32_t>(4), context->Runtime().MeshStorage().Get(mesh)->desc.vertexCount);
+
+			DestroyContextForCleanup(context);
+		}
+
 		TEST_METHOD(RuntimeCodecRegistryResolvesBuiltInDecodersByExtension)
 		{
 			AssetSuite::ContextHandle context = nullptr;

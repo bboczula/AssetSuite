@@ -61,6 +61,30 @@ AssetSuite::Internal::RuntimeContext::BlobStorage() const noexcept
 	return state.blobStorage;
 }
 
+AssetSuite::Internal::RuntimeState::ImageStorage&
+AssetSuite::Internal::RuntimeContext::ImageStorage() noexcept
+{
+	return state.imageStorage;
+}
+
+const AssetSuite::Internal::RuntimeState::ImageStorage&
+AssetSuite::Internal::RuntimeContext::ImageStorage() const noexcept
+{
+	return state.imageStorage;
+}
+
+AssetSuite::Internal::RuntimeState::MeshStorage&
+AssetSuite::Internal::RuntimeContext::MeshStorage() noexcept
+{
+	return state.meshStorage;
+}
+
+const AssetSuite::Internal::RuntimeState::MeshStorage&
+AssetSuite::Internal::RuntimeContext::MeshStorage() const noexcept
+{
+	return state.meshStorage;
+}
+
 AssetSuite::Internal::RuntimeState::CodecRegistry&
 AssetSuite::Internal::RuntimeContext::CodecRegistry() noexcept
 {

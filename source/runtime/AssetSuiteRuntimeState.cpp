@@ -517,6 +517,90 @@ size_t AssetSuite::Internal::RuntimeState::BlobStorage::SlotCapacity() const noe
 	return slots.size();
 }
 
+AssetSuite::ImageHandle AssetSuite::Internal::RuntimeState::ImageStorage::Create(
+	ImageDesc desc,
+	std::vector<uint8_t> bytes)
+{
+	auto image = std::make_unique<AssetSuiteImage_t>();
+	image->desc = desc;
+	image->bytes = std::move(bytes);
+
+	ImageHandle handle = image.get();
+	images.push_back(std::move(image));
+	return handle;
+}
+
+bool AssetSuite::Internal::RuntimeState::ImageStorage::Owns(ImageHandle image) const noexcept
+{
+	return Get(image) != nullptr;
+}
+
+const AssetSuite::AssetSuiteImage_t*
+AssetSuite::Internal::RuntimeState::ImageStorage::Get(ImageHandle image) const noexcept
+{
+	if (!image)
+	{
+		return nullptr;
+	}
+
+	for (const auto& storedImage : images)
+	{
+		if (storedImage.get() == image)
+		{
+			return storedImage.get();
+		}
+	}
+
+	return nullptr;
+}
+
+size_t AssetSuite::Internal::RuntimeState::ImageStorage::LiveCount() const noexcept
+{
+	return images.size();
+}
+
+AssetSuite::MeshHandle AssetSuite::Internal::RuntimeState::MeshStorage::Create(
+	MeshDesc desc,
+	std::vector<uint8_t> bytes)
+{
+	auto mesh = std::make_unique<AssetSuiteMesh_t>();
+	mesh->desc = desc;
+	mesh->bytes = std::move(bytes);
+
+	MeshHandle handle = mesh.get();
+	meshes.push_back(std::move(mesh));
+	return handle;
+}
+
+bool AssetSuite::Internal::RuntimeState::MeshStorage::Owns(MeshHandle mesh) const noexcept
+{
+	return Get(mesh) != nullptr;
+}
+
+const AssetSuite::AssetSuiteMesh_t*
+AssetSuite::Internal::RuntimeState::MeshStorage::Get(MeshHandle mesh) const noexcept
+{
+	if (!mesh)
+	{
+		return nullptr;
+	}
+
+	for (const auto& storedMesh : meshes)
+	{
+		if (storedMesh.get() == mesh)
+		{
+			return storedMesh.get();
+		}
+	}
+
+	return nullptr;
+}
+
+size_t AssetSuite::Internal::RuntimeState::MeshStorage::LiveCount() const noexcept
+{
+	return meshes.size();
+}
+
 bool AssetSuite::Internal::RuntimeState::CodecRegistry::RegisterImageDecoder(
 	ImageDecoders decoder,
 	ImageDecoder& implementation)
