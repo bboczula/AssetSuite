@@ -327,6 +327,70 @@ AssetSuite::Result AssetSuite::DecodeMeshFromFile(ContextHandle context, const c
 	}
 }
 
+AssetSuite::Result AssetSuite::GetImageDesc(ContextHandle context, ImageHandle image, ImageDesc* outDesc)
+{
+	if (!context)
+	{
+		return Result::ErrorInvalidContext;
+	}
+
+	if (!outDesc)
+	{
+		return Result::ErrorInvalidArgument;
+	}
+
+	const AssetSuiteImage_t* storedImage = context->Runtime().ImageStorage().Get(image);
+	if (!storedImage)
+	{
+		return Result::ErrorInvalidHandle;
+	}
+
+	*outDesc = storedImage->desc;
+	return Result::Success;
+}
+
+AssetSuite::Result AssetSuite::GetMeshDesc(ContextHandle context, MeshHandle mesh, MeshDesc* outDesc)
+{
+	if (!context)
+	{
+		return Result::ErrorInvalidContext;
+	}
+
+	if (!outDesc)
+	{
+		return Result::ErrorInvalidArgument;
+	}
+
+	const AssetSuiteMesh_t* storedMesh = context->Runtime().MeshStorage().Get(mesh);
+	if (!storedMesh)
+	{
+		return Result::ErrorInvalidHandle;
+	}
+
+	*outDesc = storedMesh->desc;
+	return Result::Success;
+}
+
+AssetSuite::Result AssetSuite::ReleaseImage(ContextHandle context, ImageHandle* image)
+{
+	if (!context)
+	{
+		return Result::ErrorInvalidContext;
+	}
+
+	return context->Runtime().ImageStorage().Release(image);
+}
+
+AssetSuite::Result AssetSuite::ReleaseMesh(ContextHandle context, MeshHandle* mesh)
+{
+	if (!context)
+	{
+		return Result::ErrorInvalidContext;
+	}
+
+	return context->Runtime().MeshStorage().Release(mesh);
+}
+
 AssetSuite::Result AssetSuite::ReleaseBlob(ContextHandle context, BlobHandle* blob)
 {
 	if (!context)

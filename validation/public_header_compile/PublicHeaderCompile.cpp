@@ -131,6 +131,18 @@ static_assert(std::is_same_v<
 	decltype(&AssetSuite::DecodeMeshFromFile),
 	AssetSuite::Result (*)(AssetSuite::ContextHandle, const char*, AssetSuite::MeshHandle*)>);
 static_assert(std::is_same_v<
+	decltype(&AssetSuite::GetImageDesc),
+	AssetSuite::Result (*)(AssetSuite::ContextHandle, AssetSuite::ImageHandle, AssetSuite::ImageDesc*)>);
+static_assert(std::is_same_v<
+	decltype(&AssetSuite::GetMeshDesc),
+	AssetSuite::Result (*)(AssetSuite::ContextHandle, AssetSuite::MeshHandle, AssetSuite::MeshDesc*)>);
+static_assert(std::is_same_v<
+	decltype(&AssetSuite::ReleaseImage),
+	AssetSuite::Result (*)(AssetSuite::ContextHandle, AssetSuite::ImageHandle*)>);
+static_assert(std::is_same_v<
+	decltype(&AssetSuite::ReleaseMesh),
+	AssetSuite::Result (*)(AssetSuite::ContextHandle, AssetSuite::MeshHandle*)>);
+static_assert(std::is_same_v<
 	decltype(&AssetSuite::ReleaseBlob),
 	AssetSuite::Result (*)(AssetSuite::ContextHandle, AssetSuite::BlobHandle*)>);
 
@@ -166,6 +178,10 @@ int main()
 	const AssetSuite::Result loadNullPathResult = AssetSuite::LoadFile(context, nullptr, &blob);
 	const AssetSuite::Result decodeNullImagePathResult = AssetSuite::DecodeImageFromFile(context, nullptr, &image);
 	const AssetSuite::Result decodeNullMeshPathResult = AssetSuite::DecodeMeshFromFile(context, nullptr, &mesh);
+	const AssetSuite::Result getNullImageResult = AssetSuite::GetImageDesc(context, image, &imageDesc);
+	const AssetSuite::Result getNullMeshResult = AssetSuite::GetMeshDesc(context, mesh, &meshDesc);
+	const AssetSuite::Result releaseNullImageResult = AssetSuite::ReleaseImage(context, &image);
+	const AssetSuite::Result releaseNullMeshResult = AssetSuite::ReleaseMesh(context, &mesh);
 	const AssetSuite::Result releaseNullBlobResult = AssetSuite::ReleaseBlob(context, &blob);
 	const AssetSuite::Result destroyExplicitResult = AssetSuite::DestroyContext(&context);
 
@@ -182,6 +198,10 @@ int main()
 		loadNullPathResult == AssetSuite::Result::ErrorUnknown ||
 		decodeNullImagePathResult == AssetSuite::Result::ErrorUnknown ||
 		decodeNullMeshPathResult == AssetSuite::Result::ErrorUnknown ||
+		getNullImageResult == AssetSuite::Result::ErrorUnknown ||
+		getNullMeshResult == AssetSuite::Result::ErrorUnknown ||
+		releaseNullImageResult == AssetSuite::Result::ErrorUnknown ||
+		releaseNullMeshResult == AssetSuite::Result::ErrorUnknown ||
 		releaseNullBlobResult == AssetSuite::Result::ErrorUnknown ||
 		destroyExplicitResult == AssetSuite::Result::ErrorUnknown;
 }

@@ -69,17 +69,19 @@ other operations on the context.
 ## Decode Error Contract
 
 Image and mesh decode entry points use shared runtime probing before invoking a
-codec. If no registered decoder can be selected for the supplied bytes and
+codec. If no registered codec can be selected for the supplied bytes and
 source metadata, the public result is `AssetSuite::Result::ErrorUnsupportedFormat`.
 
-Once a decoder is selected, malformed source bytes are reported as
+Once a codec is selected, malformed source bytes are reported as
 `AssetSuite::Result::ErrorMalformedData` when the runtime can classify the
-failure as input corruption. Other selected-decoder failures are reported as
-`AssetSuite::Result::ErrorDecodeFailed`.
+failure as input corruption.
 
 Blob decode entry points preserve the caller's source `AssetSuite::BlobHandle`.
 File decode entry points use the same runtime route after loading file bytes,
 but their temporary source blob is not exposed or retained after the call.
+Decoded image and mesh handles can be inspected through their descriptor APIs
+and must be released with `AssetSuite::ReleaseImage` or
+`AssetSuite::ReleaseMesh`.
 
 ## Usage
 

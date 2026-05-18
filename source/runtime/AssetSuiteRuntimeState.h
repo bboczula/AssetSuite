@@ -105,6 +105,7 @@ namespace AssetSuite::Internal
 			ImageHandle Create(ImageDesc desc, std::vector<uint8_t> bytes);
 			bool Owns(ImageHandle image) const noexcept;
 			const AssetSuiteImage_t* Get(ImageHandle image) const noexcept;
+			Result Release(ImageHandle* image) noexcept;
 			size_t LiveCount() const noexcept;
 
 		private:
@@ -116,6 +117,7 @@ namespace AssetSuite::Internal
 			MeshHandle Create(MeshDesc desc, std::vector<uint8_t> bytes);
 			bool Owns(MeshHandle mesh) const noexcept;
 			const AssetSuiteMesh_t* Get(MeshHandle mesh) const noexcept;
+			Result Release(MeshHandle* mesh) noexcept;
 			size_t LiveCount() const noexcept;
 
 		private:

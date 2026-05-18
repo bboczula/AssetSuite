@@ -554,6 +554,26 @@ AssetSuite::Internal::RuntimeState::ImageStorage::Get(ImageHandle image) const n
 	return nullptr;
 }
 
+AssetSuite::Result AssetSuite::Internal::RuntimeState::ImageStorage::Release(ImageHandle* image) noexcept
+{
+	if (!image || !*image)
+	{
+		return Result::ErrorInvalidHandle;
+	}
+
+	for (auto storedImage = images.begin(); storedImage != images.end(); ++storedImage)
+	{
+		if (storedImage->get() == *image)
+		{
+			images.erase(storedImage);
+			*image = nullptr;
+			return Result::Success;
+		}
+	}
+
+	return Result::ErrorInvalidHandle;
+}
+
 size_t AssetSuite::Internal::RuntimeState::ImageStorage::LiveCount() const noexcept
 {
 	return images.size();
@@ -594,6 +614,26 @@ AssetSuite::Internal::RuntimeState::MeshStorage::Get(MeshHandle mesh) const noex
 	}
 
 	return nullptr;
+}
+
+AssetSuite::Result AssetSuite::Internal::RuntimeState::MeshStorage::Release(MeshHandle* mesh) noexcept
+{
+	if (!mesh || !*mesh)
+	{
+		return Result::ErrorInvalidHandle;
+	}
+
+	for (auto storedMesh = meshes.begin(); storedMesh != meshes.end(); ++storedMesh)
+	{
+		if (storedMesh->get() == *mesh)
+		{
+			meshes.erase(storedMesh);
+			*mesh = nullptr;
+			return Result::Success;
+		}
+	}
+
+	return Result::ErrorInvalidHandle;
 }
 
 size_t AssetSuite::Internal::RuntimeState::MeshStorage::LiveCount() const noexcept
