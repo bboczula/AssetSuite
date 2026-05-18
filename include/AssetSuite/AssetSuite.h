@@ -55,6 +55,35 @@ namespace AssetSuite
 	// return Result::ErrorIoFailure.
 	ASSET_SUITE_API Result LoadFile(ContextHandle context, const char* filePath, BlobHandle* outBlob);
 
+	// Decodes a runtime-owned blob into a runtime-owned image. outImage must
+	// point to a null handle and receives ownership of the created image handle
+	// on success. The source blob remains owned by the context and is not
+	// released by this call.
+	//
+	// Passing a null context returns Result::ErrorInvalidContext. Passing an
+	// invalid blob handle, including a handle from another context, returns
+	// Result::ErrorInvalidHandle. Passing a null outImage or non-null
+	// *outImage returns Result::ErrorInvalidArgument. Inputs that cannot be
+	// routed to a registered image decoder return
+	// Result::ErrorUnsupportedFormat. Recognized but malformed image bytes
+	// return Result::ErrorMalformedData where the selected decoder can
+	// distinguish malformed input, otherwise Result::ErrorDecodeFailed.
+	ASSET_SUITE_API Result DecodeImage(ContextHandle context, BlobHandle blob, ImageHandle* outImage);
+
+	// Loads a file and decodes it into a runtime-owned image using the same
+	// runtime probing and codec invocation path as DecodeImage. The temporary
+	// file bytes are owned only for the duration of this call.
+	ASSET_SUITE_API Result DecodeImageFromFile(ContextHandle context, const char* filePath, ImageHandle* outImage);
+
+	// Decodes a runtime-owned blob into a runtime-owned mesh. Ownership,
+	// validation, probing, and error mapping follow DecodeImage.
+	ASSET_SUITE_API Result DecodeMesh(ContextHandle context, BlobHandle blob, MeshHandle* outMesh);
+
+	// Loads a file and decodes it into a runtime-owned mesh using the same
+	// runtime probing and codec invocation path as DecodeMesh. The temporary
+	// file bytes are owned only for the duration of this call.
+	ASSET_SUITE_API Result DecodeMeshFromFile(ContextHandle context, const char* filePath, MeshHandle* outMesh);
+
 	// Releases a runtime-owned blob and sets the caller's handle to nullptr on
 	// success. Memory and metadata behind the blob are invalid immediately
 	// after a successful release.

@@ -114,6 +114,8 @@ const char* AssetSuite::GetResultString(Result result)
 		return "Error: invalid handle";
 	case Result::ErrorIoFailure:
 		return "Error: IO failure";
+	case Result::ErrorMalformedData:
+		return "Error: malformed data";
 	case Result::ErrorUnknown:
 		return "Error: unknown";
 	default:
@@ -199,6 +201,76 @@ AssetSuite::Result AssetSuite::LoadFile(ContextHandle context, const char* fileP
 	}
 
 	return Result::Success;
+}
+
+AssetSuite::Result AssetSuite::DecodeImage(ContextHandle context, BlobHandle blob, ImageHandle* outImage)
+{
+	if (!context)
+	{
+		return Result::ErrorInvalidContext;
+	}
+
+	if (!blob)
+	{
+		return Result::ErrorInvalidHandle;
+	}
+
+	if (!outImage || *outImage)
+	{
+		return Result::ErrorInvalidArgument;
+	}
+
+	return Result::ErrorUnsupportedFormat;
+}
+
+AssetSuite::Result AssetSuite::DecodeImageFromFile(ContextHandle context, const char* filePath, ImageHandle* outImage)
+{
+	if (!context)
+	{
+		return Result::ErrorInvalidContext;
+	}
+
+	if (!filePath || !outImage || *outImage)
+	{
+		return Result::ErrorInvalidArgument;
+	}
+
+	return Result::ErrorUnsupportedFormat;
+}
+
+AssetSuite::Result AssetSuite::DecodeMesh(ContextHandle context, BlobHandle blob, MeshHandle* outMesh)
+{
+	if (!context)
+	{
+		return Result::ErrorInvalidContext;
+	}
+
+	if (!blob)
+	{
+		return Result::ErrorInvalidHandle;
+	}
+
+	if (!outMesh || *outMesh)
+	{
+		return Result::ErrorInvalidArgument;
+	}
+
+	return Result::ErrorUnsupportedFormat;
+}
+
+AssetSuite::Result AssetSuite::DecodeMeshFromFile(ContextHandle context, const char* filePath, MeshHandle* outMesh)
+{
+	if (!context)
+	{
+		return Result::ErrorInvalidContext;
+	}
+
+	if (!filePath || !outMesh || *outMesh)
+	{
+		return Result::ErrorInvalidArgument;
+	}
+
+	return Result::ErrorUnsupportedFormat;
 }
 
 AssetSuite::Result AssetSuite::ReleaseBlob(ContextHandle context, BlobHandle* blob)

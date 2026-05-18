@@ -20,6 +20,7 @@ namespace AssetSuite
 		ErrorInvalidContext = -7,
 		ErrorInvalidHandle = -8,
 		ErrorIoFailure = -9,
+		ErrorMalformedData = -10,
 		ErrorUnknown = -1000
 	};
 

@@ -119,6 +119,18 @@ static_assert(std::is_same_v<
 	decltype(&AssetSuite::LoadFile),
 	AssetSuite::Result (*)(AssetSuite::ContextHandle, const char*, AssetSuite::BlobHandle*)>);
 static_assert(std::is_same_v<
+	decltype(&AssetSuite::DecodeImage),
+	AssetSuite::Result (*)(AssetSuite::ContextHandle, AssetSuite::BlobHandle, AssetSuite::ImageHandle*)>);
+static_assert(std::is_same_v<
+	decltype(&AssetSuite::DecodeImageFromFile),
+	AssetSuite::Result (*)(AssetSuite::ContextHandle, const char*, AssetSuite::ImageHandle*)>);
+static_assert(std::is_same_v<
+	decltype(&AssetSuite::DecodeMesh),
+	AssetSuite::Result (*)(AssetSuite::ContextHandle, AssetSuite::BlobHandle, AssetSuite::MeshHandle*)>);
+static_assert(std::is_same_v<
+	decltype(&AssetSuite::DecodeMeshFromFile),
+	AssetSuite::Result (*)(AssetSuite::ContextHandle, const char*, AssetSuite::MeshHandle*)>);
+static_assert(std::is_same_v<
 	decltype(&AssetSuite::ReleaseBlob),
 	AssetSuite::Result (*)(AssetSuite::ContextHandle, AssetSuite::BlobHandle*)>);
 
@@ -152,6 +164,8 @@ int main()
 		AssetSuite::LogLevel::Trace,
 		nullptr);
 	const AssetSuite::Result loadNullPathResult = AssetSuite::LoadFile(context, nullptr, &blob);
+	const AssetSuite::Result decodeNullImagePathResult = AssetSuite::DecodeImageFromFile(context, nullptr, &image);
+	const AssetSuite::Result decodeNullMeshPathResult = AssetSuite::DecodeMeshFromFile(context, nullptr, &mesh);
 	const AssetSuite::Result releaseNullBlobResult = AssetSuite::ReleaseBlob(context, &blob);
 	const AssetSuite::Result destroyExplicitResult = AssetSuite::DestroyContext(&context);
 
@@ -166,6 +180,8 @@ int main()
 		setLoggingResult == AssetSuite::Result::ErrorUnknown ||
 		unregisterLoggingResult == AssetSuite::Result::ErrorUnknown ||
 		loadNullPathResult == AssetSuite::Result::ErrorUnknown ||
+		decodeNullImagePathResult == AssetSuite::Result::ErrorUnknown ||
+		decodeNullMeshPathResult == AssetSuite::Result::ErrorUnknown ||
 		releaseNullBlobResult == AssetSuite::Result::ErrorUnknown ||
 		destroyExplicitResult == AssetSuite::Result::ErrorUnknown;
 }
