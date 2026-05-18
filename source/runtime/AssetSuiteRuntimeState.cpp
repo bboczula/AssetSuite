@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <cstring>
 #include <cstdint>
 #include <system_error>
 #include <utility>
@@ -105,6 +106,71 @@ namespace
 		return std::find(supportedExtensions.begin(), supportedExtensions.end(), normalizedExtension) != supportedExtensions.end();
 	}
 
+	bool HasBmpSignature(const uint8_t* data, size_t size) noexcept
+	{
+		return data && size >= 2 && data[0] == 'B' && data[1] == 'M';
+	}
+
+	bool HasPngSignature(const uint8_t* data, size_t size) noexcept
+	{
+		constexpr uint8_t PNG_SIGNATURE[] = { 0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n' };
+		return data && size >= sizeof(PNG_SIGNATURE) && std::memcmp(data, PNG_SIGNATURE, sizeof(PNG_SIGNATURE)) == 0;
+	}
+
+	bool StartsWithToken(const char* line, size_t lineLength, const char* token) noexcept
+	{
+		const size_t tokenLength = std::strlen(token);
+		return lineLength >= tokenLength &&
+			std::memcmp(line, token, tokenLength) == 0 &&
+			(lineLength == tokenLength || std::isspace(static_cast<unsigned char>(line[tokenLength])) != 0);
+	}
+
+	bool HasWavefrontObjContent(const uint8_t* data, size_t size) noexcept
+	{
+		if (!data || size == 0)
+		{
+			return false;
+		}
+
+		const char* text = reinterpret_cast<const char*>(data);
+		size_t offset = 0;
+		while (offset < size)
+		{
+			while (offset < size && (text[offset] == ' ' || text[offset] == '\t' || text[offset] == '\r' || text[offset] == '\n'))
+			{
+				++offset;
+			}
+
+			if (offset >= size || text[offset] == '\0')
+			{
+				break;
+			}
+
+			const size_t lineStart = offset;
+			while (offset < size && text[offset] != '\r' && text[offset] != '\n' && text[offset] != '\0')
+			{
+				++offset;
+			}
+
+			const size_t lineLength = offset - lineStart;
+			const char* line = text + lineStart;
+			if (lineLength > 0 &&
+				(StartsWithToken(line, lineLength, "v") ||
+					StartsWithToken(line, lineLength, "vn") ||
+					StartsWithToken(line, lineLength, "vt") ||
+					StartsWithToken(line, lineLength, "f") ||
+					StartsWithToken(line, lineLength, "o") ||
+					StartsWithToken(line, lineLength, "g") ||
+					StartsWithToken(line, lineLength, "mtllib") ||
+					StartsWithToken(line, lineLength, "usemtl")))
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	AssetSuite::AssetFormat FormatForImageDecoder(AssetSuite::ImageDecoders decoder) noexcept
 	{
 		switch (decoder)
@@ -131,6 +197,20 @@ namespace
 		}
 	}
 
+	AssetSuite::Internal::RuntimeState::CodecRegistry::ProbeCallback ProbeForImageDecoder(
+		AssetSuite::ImageDecoders decoder) noexcept
+	{
+		switch (decoder)
+		{
+		case AssetSuite::ImageDecoders::BMP:
+			return &HasBmpSignature;
+		case AssetSuite::ImageDecoders::PNG:
+			return &HasPngSignature;
+		default:
+			return nullptr;
+		}
+	}
+
 	AssetSuite::AssetFormat FormatForMeshDecoder(AssetSuite::MeshDecoders decoder) noexcept
 	{
 		switch (decoder)
@@ -150,6 +230,18 @@ namespace
 			return { ".obj" };
 		default:
 			return {};
+		}
+	}
+
+	AssetSuite::Internal::RuntimeState::CodecRegistry::ProbeCallback ProbeForMeshDecoder(
+		AssetSuite::MeshDecoders decoder) noexcept
+	{
+		switch (decoder)
+		{
+		case AssetSuite::MeshDecoders::WAVEFRONT:
+			return &HasWavefrontObjContent;
+		default:
+			return nullptr;
 		}
 	}
 
@@ -440,7 +532,7 @@ bool AssetSuite::Internal::RuntimeState::CodecRegistry::RegisterImageDecoder(
 			decoder,
 			MeshDecoders::Auto,
 			ExtensionsForImageDecoder(decoder),
-			nullptr,
+			ProbeForImageDecoder(decoder),
 			&implementation,
 			nullptr,
 			nullptr
@@ -466,7 +558,7 @@ bool AssetSuite::Internal::RuntimeState::CodecRegistry::RegisterMeshDecoder(
 			ImageDecoders::Auto,
 			decoder,
 			ExtensionsForMeshDecoder(decoder),
-			nullptr,
+			ProbeForMeshDecoder(decoder),
 			nullptr,
 			&implementation,
 			nullptr
@@ -562,6 +654,44 @@ AssetSuite::MeshDecoders AssetSuite::Internal::RuntimeState::CodecRegistry::Reso
 	}
 
 	return MeshDecoders::Auto;
+}
+
+AssetSuite::ImageDecoders AssetSuite::Internal::RuntimeState::CodecRegistry::ProbeImageDecoder(
+	const std::filesystem::path& extension,
+	const uint8_t* data,
+	size_t size) const noexcept
+{
+	for (const CodecRecord& record : records)
+	{
+		if (record.assetKind == CodecRegistry::AssetKind::Image &&
+			(record.capabilities & static_cast<uint32_t>(CodecRegistry::Capability::Decode)) != 0 &&
+			record.probe &&
+			record.probe(data, size))
+		{
+			return record.imageDecoder;
+		}
+	}
+
+	return ResolveImageDecoder(extension);
+}
+
+AssetSuite::MeshDecoders AssetSuite::Internal::RuntimeState::CodecRegistry::ProbeMeshDecoder(
+	const std::filesystem::path& extension,
+	const uint8_t* data,
+	size_t size) const noexcept
+{
+	for (const CodecRecord& record : records)
+	{
+		if (record.assetKind == CodecRegistry::AssetKind::Mesh &&
+			(record.capabilities & static_cast<uint32_t>(CodecRegistry::Capability::Decode)) != 0 &&
+			record.probe &&
+			record.probe(data, size))
+		{
+			return record.meshDecoder;
+		}
+	}
+
+	return ResolveMeshDecoder(extension);
 }
 
 const std::vector<AssetSuite::Internal::RuntimeState::CodecRegistry::CodecRecord>&

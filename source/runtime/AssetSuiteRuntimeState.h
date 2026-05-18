@@ -126,6 +126,8 @@ namespace AssetSuite::Internal
 			ImageEncoder* FindImageEncoder(AssetFormat format) const noexcept;
 			ImageDecoders ResolveImageDecoder(const std::filesystem::path& extension) const noexcept;
 			MeshDecoders ResolveMeshDecoder(const std::filesystem::path& extension) const noexcept;
+			ImageDecoders ProbeImageDecoder(const std::filesystem::path& extension, const uint8_t* data, size_t size) const noexcept;
+			MeshDecoders ProbeMeshDecoder(const std::filesystem::path& extension, const uint8_t* data, size_t size) const noexcept;
 			const std::vector<CodecRecord>& Records() const noexcept;
 
 		private:
