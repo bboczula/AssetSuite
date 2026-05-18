@@ -26,6 +26,8 @@ Legacy `Manager` remains as a compatibility facade for existing tests and demo c
 
 Only concrete codec identifiers may be registered or queried. Sentinel values such as `Auto` and `MaxDecoders` are resolved or rejected before lookup.
 
+The built-in registry treats `PpmEncoder` as the currently supported image encoder path. Format probing should prefer recognized signatures or content markers over filename extensions, with extensions used as a fallback when bytes are unavailable or inconclusive. If an extension and signature disagree, the recognized byte signature is authoritative.
+
 ## SDK Boundary
 
 Runtime headers under `source/runtime` are private implementation files. They must not be installed with the public SDK headers and must not be included from `include/AssetSuite`.

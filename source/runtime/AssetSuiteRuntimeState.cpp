@@ -10,6 +10,10 @@
 #include <limits>
 #include <new>
 #include <atomic>
+#include <algorithm>
+#include <array>
+#include <cctype>
+#include <cstring>
 #include <cstdint>
 #include <system_error>
 #include <utility>
@@ -78,6 +82,182 @@ namespace
 		generation = (generation + 1u) & static_cast<uint32_t>(GENERATION_MASK);
 		return generation == 0 ? INITIAL_BLOB_GENERATION : generation;
 	}
+
+	std::filesystem::path NormalizeExtension(const std::filesystem::path& extension)
+	{
+		std::string normalizedExtension = extension.string();
+		std::transform(
+			normalizedExtension.begin(),
+			normalizedExtension.end(),
+			normalizedExtension.begin(),
+			[](unsigned char character)
+			{
+				return static_cast<char>(std::tolower(character));
+			});
+
+		return std::filesystem::path(normalizedExtension);
+	}
+
+	bool ExtensionMatches(
+		const std::vector<std::filesystem::path>& supportedExtensions,
+		const std::filesystem::path& extension)
+	{
+		const std::filesystem::path normalizedExtension = NormalizeExtension(extension);
+		return std::find(supportedExtensions.begin(), supportedExtensions.end(), normalizedExtension) != supportedExtensions.end();
+	}
+
+	bool HasBmpSignature(const uint8_t* data, size_t size) noexcept
+	{
+		return data && size >= 2 && data[0] == 'B' && data[1] == 'M';
+	}
+
+	bool HasPngSignature(const uint8_t* data, size_t size) noexcept
+	{
+		constexpr uint8_t PNG_SIGNATURE[] = { 0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n' };
+		return data && size >= sizeof(PNG_SIGNATURE) && std::memcmp(data, PNG_SIGNATURE, sizeof(PNG_SIGNATURE)) == 0;
+	}
+
+	bool StartsWithToken(const char* line, size_t lineLength, const char* token) noexcept
+	{
+		const size_t tokenLength = std::strlen(token);
+		return lineLength >= tokenLength &&
+			std::memcmp(line, token, tokenLength) == 0 &&
+			(lineLength == tokenLength || std::isspace(static_cast<unsigned char>(line[tokenLength])) != 0);
+	}
+
+	bool HasWavefrontObjContent(const uint8_t* data, size_t size) noexcept
+	{
+		if (!data || size == 0)
+		{
+			return false;
+		}
+
+		const char* text = reinterpret_cast<const char*>(data);
+		size_t offset = 0;
+		bool hasVertex = false;
+		bool hasFace = false;
+		while (offset < size)
+		{
+			while (offset < size && (text[offset] == ' ' || text[offset] == '\t' || text[offset] == '\r' || text[offset] == '\n'))
+			{
+				++offset;
+			}
+
+			if (offset >= size || text[offset] == '\0')
+			{
+				break;
+			}
+
+			const size_t lineStart = offset;
+			while (offset < size && text[offset] != '\r' && text[offset] != '\n' && text[offset] != '\0')
+			{
+				++offset;
+			}
+
+			const size_t lineLength = offset - lineStart;
+			const char* line = text + lineStart;
+			if (StartsWithToken(line, lineLength, "v"))
+			{
+				hasVertex = true;
+			}
+			else if (StartsWithToken(line, lineLength, "f"))
+			{
+				hasFace = true;
+			}
+
+			if (hasVertex && hasFace)
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	AssetSuite::AssetFormat FormatForImageDecoder(AssetSuite::ImageDecoders decoder) noexcept
+	{
+		switch (decoder)
+		{
+		case AssetSuite::ImageDecoders::BMP:
+			return AssetSuite::AssetFormat::BMP;
+		case AssetSuite::ImageDecoders::PNG:
+			return AssetSuite::AssetFormat::PNG;
+		default:
+			return AssetSuite::AssetFormat::Unknown;
+		}
+	}
+
+	std::vector<std::filesystem::path> ExtensionsForImageDecoder(AssetSuite::ImageDecoders decoder)
+	{
+		switch (decoder)
+		{
+		case AssetSuite::ImageDecoders::BMP:
+			return { ".bmp" };
+		case AssetSuite::ImageDecoders::PNG:
+			return { ".png" };
+		default:
+			return {};
+		}
+	}
+
+	AssetSuite::Internal::RuntimeState::CodecRegistry::ProbeCallback ProbeForImageDecoder(
+		AssetSuite::ImageDecoders decoder) noexcept
+	{
+		switch (decoder)
+		{
+		case AssetSuite::ImageDecoders::BMP:
+			return &HasBmpSignature;
+		case AssetSuite::ImageDecoders::PNG:
+			return &HasPngSignature;
+		default:
+			return nullptr;
+		}
+	}
+
+	AssetSuite::AssetFormat FormatForMeshDecoder(AssetSuite::MeshDecoders decoder) noexcept
+	{
+		switch (decoder)
+		{
+		case AssetSuite::MeshDecoders::WAVEFRONT:
+			return AssetSuite::AssetFormat::WavefrontObj;
+		default:
+			return AssetSuite::AssetFormat::Unknown;
+		}
+	}
+
+	std::vector<std::filesystem::path> ExtensionsForMeshDecoder(AssetSuite::MeshDecoders decoder)
+	{
+		switch (decoder)
+		{
+		case AssetSuite::MeshDecoders::WAVEFRONT:
+			return { ".obj" };
+		default:
+			return {};
+		}
+	}
+
+	AssetSuite::Internal::RuntimeState::CodecRegistry::ProbeCallback ProbeForMeshDecoder(
+		AssetSuite::MeshDecoders decoder) noexcept
+	{
+		switch (decoder)
+		{
+		case AssetSuite::MeshDecoders::WAVEFRONT:
+			return &HasWavefrontObjContent;
+		default:
+			return nullptr;
+		}
+	}
+
+	std::vector<std::filesystem::path> ExtensionsForImageEncoder(AssetSuite::AssetFormat format)
+	{
+		switch (format)
+		{
+		case AssetSuite::AssetFormat::PPM:
+			return { ".ppm" };
+		default:
+			return {};
+		}
+	}
 }
 
 AssetSuite::Internal::RuntimeState::RuntimeState()
@@ -99,11 +279,12 @@ AssetSuite::Internal::RuntimeState::CodecStorage::CodecStorage()
 
 AssetSuite::Internal::RuntimeState::CodecStorage::~CodecStorage() = default;
 
-void AssetSuite::Internal::RuntimeState::CodecStorage::RegisterWith(CodecRegistry& registry) noexcept
+void AssetSuite::Internal::RuntimeState::CodecStorage::RegisterWith(CodecRegistry& registry)
 {
 	registry.RegisterImageDecoder(ImageDecoders::BMP, *bmpDecoder);
 	registry.RegisterImageDecoder(ImageDecoders::PNG, *pngDecoder);
 	registry.RegisterMeshDecoder(MeshDecoders::WAVEFRONT, *modelLoader);
+	registry.RegisterImageEncoder(AssetFormat::PPM, *ppmEncoder);
 }
 
 void* AssetSuite::Internal::RuntimeState::AllocatorPolicy::Allocate(size_t size, size_t alignment)
@@ -338,7 +519,7 @@ size_t AssetSuite::Internal::RuntimeState::BlobStorage::SlotCapacity() const noe
 
 bool AssetSuite::Internal::RuntimeState::CodecRegistry::RegisterImageDecoder(
 	ImageDecoders decoder,
-	ImageDecoder& implementation) noexcept
+	ImageDecoder& implementation)
 {
 	if (decoder == ImageDecoders::Auto || decoder == ImageDecoders::MaxDecoders)
 	{
@@ -346,12 +527,25 @@ bool AssetSuite::Internal::RuntimeState::CodecRegistry::RegisterImageDecoder(
 	}
 
 	imageDecoders[static_cast<size_t>(decoder)] = &implementation;
+	records.push_back(
+		{
+			CodecRegistry::AssetKind::Image,
+			static_cast<uint32_t>(CodecRegistry::Capability::Decode),
+			FormatForImageDecoder(decoder),
+			decoder,
+			MeshDecoders::Auto,
+			ExtensionsForImageDecoder(decoder),
+			ProbeForImageDecoder(decoder),
+			&implementation,
+			nullptr,
+			nullptr
+		});
 	return true;
 }
 
 bool AssetSuite::Internal::RuntimeState::CodecRegistry::RegisterMeshDecoder(
 	MeshDecoders decoder,
-	MeshDecoder& implementation) noexcept
+	MeshDecoder& implementation)
 {
 	if (decoder == MeshDecoders::Auto || decoder == MeshDecoders::MaxDecoders)
 	{
@@ -359,6 +553,44 @@ bool AssetSuite::Internal::RuntimeState::CodecRegistry::RegisterMeshDecoder(
 	}
 
 	meshDecoders[static_cast<size_t>(decoder)] = &implementation;
+	records.push_back(
+		{
+			CodecRegistry::AssetKind::Mesh,
+			static_cast<uint32_t>(CodecRegistry::Capability::Decode),
+			FormatForMeshDecoder(decoder),
+			ImageDecoders::Auto,
+			decoder,
+			ExtensionsForMeshDecoder(decoder),
+			ProbeForMeshDecoder(decoder),
+			nullptr,
+			&implementation,
+			nullptr
+		});
+	return true;
+}
+
+bool AssetSuite::Internal::RuntimeState::CodecRegistry::RegisterImageEncoder(
+	AssetFormat format,
+	ImageEncoder& implementation)
+{
+	if (format == AssetFormat::Unknown)
+	{
+		return false;
+	}
+
+	records.push_back(
+		{
+			CodecRegistry::AssetKind::Image,
+			static_cast<uint32_t>(CodecRegistry::Capability::Encode),
+			format,
+			ImageDecoders::Auto,
+			MeshDecoders::Auto,
+			ExtensionsForImageEncoder(format),
+			nullptr,
+			nullptr,
+			nullptr,
+			&implementation
+		});
 	return true;
 }
 
@@ -370,7 +602,8 @@ AssetSuite::ImageDecoder* AssetSuite::Internal::RuntimeState::CodecRegistry::Fin
 		return nullptr;
 	}
 
-	return imageDecoders[static_cast<size_t>(decoder)];
+	const CodecRecord* record = FindImageDecoderRecord(decoder);
+	return record ? record->imageDecoderImplementation : nullptr;
 }
 
 AssetSuite::MeshDecoder* AssetSuite::Internal::RuntimeState::CodecRegistry::FindMeshDecoder(
@@ -381,20 +614,29 @@ AssetSuite::MeshDecoder* AssetSuite::Internal::RuntimeState::CodecRegistry::Find
 		return nullptr;
 	}
 
-	return meshDecoders[static_cast<size_t>(decoder)];
+	const CodecRecord* record = FindMeshDecoderRecord(decoder);
+	return record ? record->meshDecoderImplementation : nullptr;
+}
+
+AssetSuite::ImageEncoder* AssetSuite::Internal::RuntimeState::CodecRegistry::FindImageEncoder(
+	AssetFormat format) const noexcept
+{
+	const CodecRecord* record = FindImageEncoderRecord(format);
+	return record ? record->imageEncoderImplementation : nullptr;
 }
 
 AssetSuite::ImageDecoders AssetSuite::Internal::RuntimeState::CodecRegistry::ResolveImageDecoder(
 	const std::filesystem::path& extension) const noexcept
 {
-	if (extension.compare(".bmp") == 0)
+	const std::filesystem::path normalizedExtension = NormalizeExtension(extension);
+	for (const CodecRecord& record : records)
 	{
-		return ImageDecoders::BMP;
-	}
-
-	if (extension.compare(".png") == 0)
-	{
-		return ImageDecoders::PNG;
+		if (record.assetKind == CodecRegistry::AssetKind::Image &&
+			(record.capabilities & static_cast<uint32_t>(CodecRegistry::Capability::Decode)) != 0 &&
+			ExtensionMatches(record.extensions, normalizedExtension))
+		{
+			return record.imageDecoder;
+		}
 	}
 
 	return ImageDecoders::Auto;
@@ -403,10 +645,123 @@ AssetSuite::ImageDecoders AssetSuite::Internal::RuntimeState::CodecRegistry::Res
 AssetSuite::MeshDecoders AssetSuite::Internal::RuntimeState::CodecRegistry::ResolveMeshDecoder(
 	const std::filesystem::path& extension) const noexcept
 {
-	if (extension.compare(".obj") == 0)
+	const std::filesystem::path normalizedExtension = NormalizeExtension(extension);
+	for (const CodecRecord& record : records)
 	{
-		return MeshDecoders::WAVEFRONT;
+		if (record.assetKind == CodecRegistry::AssetKind::Mesh &&
+			(record.capabilities & static_cast<uint32_t>(CodecRegistry::Capability::Decode)) != 0 &&
+			ExtensionMatches(record.extensions, normalizedExtension))
+		{
+			return record.meshDecoder;
+		}
 	}
 
 	return MeshDecoders::Auto;
+}
+
+AssetSuite::ImageDecoders AssetSuite::Internal::RuntimeState::CodecRegistry::ProbeImageDecoder(
+	const std::filesystem::path& extension,
+	const uint8_t* data,
+	size_t size) const noexcept
+{
+	for (const CodecRecord& record : records)
+	{
+		if (record.assetKind == CodecRegistry::AssetKind::Image &&
+			(record.capabilities & static_cast<uint32_t>(CodecRegistry::Capability::Decode)) != 0 &&
+			record.probe &&
+			record.probe(data, size))
+		{
+			return record.imageDecoder;
+		}
+	}
+
+	return ResolveImageDecoder(extension);
+}
+
+AssetSuite::MeshDecoders AssetSuite::Internal::RuntimeState::CodecRegistry::ProbeMeshDecoder(
+	const std::filesystem::path& extension,
+	const uint8_t* data,
+	size_t size) const noexcept
+{
+	for (const CodecRecord& record : records)
+	{
+		if (record.assetKind == CodecRegistry::AssetKind::Mesh &&
+			(record.capabilities & static_cast<uint32_t>(CodecRegistry::Capability::Decode)) != 0 &&
+			record.probe &&
+			record.probe(data, size))
+		{
+			return record.meshDecoder;
+		}
+	}
+
+	return ResolveMeshDecoder(extension);
+}
+
+const std::vector<AssetSuite::Internal::RuntimeState::CodecRegistry::CodecRecord>&
+AssetSuite::Internal::RuntimeState::CodecRegistry::Records() const noexcept
+{
+	return records;
+}
+
+const AssetSuite::Internal::RuntimeState::CodecRegistry::CodecRecord*
+AssetSuite::Internal::RuntimeState::CodecRegistry::FindImageDecoderRecord(ImageDecoders decoder) const noexcept
+{
+	if (decoder == ImageDecoders::Auto || decoder == ImageDecoders::MaxDecoders)
+	{
+		return nullptr;
+	}
+
+	for (auto record = records.rbegin(); record != records.rend(); ++record)
+	{
+		if (record->assetKind == CodecRegistry::AssetKind::Image &&
+			(record->capabilities & static_cast<uint32_t>(CodecRegistry::Capability::Decode)) != 0 &&
+			record->imageDecoder == decoder)
+		{
+			return &(*record);
+		}
+	}
+
+	return nullptr;
+}
+
+const AssetSuite::Internal::RuntimeState::CodecRegistry::CodecRecord*
+AssetSuite::Internal::RuntimeState::CodecRegistry::FindMeshDecoderRecord(MeshDecoders decoder) const noexcept
+{
+	if (decoder == MeshDecoders::Auto || decoder == MeshDecoders::MaxDecoders)
+	{
+		return nullptr;
+	}
+
+	for (auto record = records.rbegin(); record != records.rend(); ++record)
+	{
+		if (record->assetKind == CodecRegistry::AssetKind::Mesh &&
+			(record->capabilities & static_cast<uint32_t>(CodecRegistry::Capability::Decode)) != 0 &&
+			record->meshDecoder == decoder)
+		{
+			return &(*record);
+		}
+	}
+
+	return nullptr;
+}
+
+const AssetSuite::Internal::RuntimeState::CodecRegistry::CodecRecord*
+AssetSuite::Internal::RuntimeState::CodecRegistry::FindImageEncoderRecord(AssetFormat format) const noexcept
+{
+	if (format == AssetFormat::Unknown)
+	{
+		return nullptr;
+	}
+
+	for (auto record = records.rbegin(); record != records.rend(); ++record)
+	{
+		if (record->assetKind == CodecRegistry::AssetKind::Image &&
+			(record->capabilities & static_cast<uint32_t>(CodecRegistry::Capability::Encode)) != 0 &&
+			record->format == format)
+		{
+			return &(*record);
+		}
+	}
+
+	return nullptr;
 }

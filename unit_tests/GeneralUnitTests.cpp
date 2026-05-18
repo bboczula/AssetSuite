@@ -83,6 +83,33 @@ namespace
 
 		return currentDirectory;
 	}
+
+	class TestImageDecoder final : public AssetSuite::ImageDecoder
+	{
+	public:
+		bool Decode(std::vector<BYTE>& output, BYTE* buffer, AssetSuite::ImageDescriptor& descriptor) override
+		{
+			return true;
+		}
+	};
+
+	class TestMeshDecoder final : public AssetSuite::MeshDecoder
+	{
+	public:
+		bool Decode(std::vector<BYTE>& output, BYTE* buffer, AssetSuite::MeshDescriptor& descriptor) override
+		{
+			return true;
+		}
+	};
+
+	class TestImageEncoder final : public AssetSuite::ImageEncoder
+	{
+	public:
+		std::vector<BYTE> Encode(const std::vector<BYTE>& buffer, const AssetSuite::ImageDescriptor& descriptor) override
+		{
+			return buffer;
+		}
+	};
 }
 
 namespace GeneralUnitTests
@@ -676,6 +703,132 @@ namespace GeneralUnitTests
 			DestroyContextForCleanup(context);
 		}
 
+		TEST_METHOD(RuntimeCodecRegistryResolvesBuiltInDecodersByExtension)
+		{
+			AssetSuite::ContextHandle context = nullptr;
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+
+			auto& registry = context->Runtime().CodecRegistry();
+
+			Assert::AreEqual(true, AssetSuite::ImageDecoders::BMP == registry.ResolveImageDecoder(".bmp"));
+			Assert::AreEqual(true, AssetSuite::ImageDecoders::PNG == registry.ResolveImageDecoder(".PNG"));
+			Assert::AreEqual(true, AssetSuite::MeshDecoders::WAVEFRONT == registry.ResolveMeshDecoder(".obj"));
+			Assert::AreEqual(true, AssetSuite::ImageDecoders::Auto == registry.ResolveImageDecoder(".asset"));
+			Assert::AreEqual(true, AssetSuite::MeshDecoders::Auto == registry.ResolveMeshDecoder(".asset"));
+
+			DestroyContextForCleanup(context);
+		}
+
+		TEST_METHOD(RuntimeCodecRegistryProbesImageDecodersBySignature)
+		{
+			AssetSuite::ContextHandle context = nullptr;
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+
+			auto& registry = context->Runtime().CodecRegistry();
+			const std::vector<uint8_t> bmpBytes = { 'B', 'M', 0x00, 0x00 };
+			const std::vector<uint8_t> pngBytes = { 0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n' };
+
+			Assert::AreEqual(true, AssetSuite::ImageDecoders::BMP == registry.ProbeImageDecoder(".asset", bmpBytes.data(), bmpBytes.size()));
+			Assert::AreEqual(true, AssetSuite::ImageDecoders::PNG == registry.ProbeImageDecoder(".asset", pngBytes.data(), pngBytes.size()));
+
+			DestroyContextForCleanup(context);
+		}
+
+		TEST_METHOD(RuntimeCodecRegistryPrefersImageSignatureOverExtension)
+		{
+			AssetSuite::ContextHandle context = nullptr;
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+
+			auto& registry = context->Runtime().CodecRegistry();
+			const std::vector<uint8_t> bmpBytes = { 'B', 'M', 0x00, 0x00 };
+			const std::vector<uint8_t> pngBytes = { 0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n' };
+
+			Assert::AreEqual(true, AssetSuite::ImageDecoders::BMP == registry.ProbeImageDecoder(".png", bmpBytes.data(), bmpBytes.size()));
+			Assert::AreEqual(true, AssetSuite::ImageDecoders::PNG == registry.ProbeImageDecoder(".bmp", pngBytes.data(), pngBytes.size()));
+
+			DestroyContextForCleanup(context);
+		}
+
+		TEST_METHOD(RuntimeCodecRegistryProbesObjContent)
+		{
+			AssetSuite::ContextHandle context = nullptr;
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+
+			auto& registry = context->Runtime().CodecRegistry();
+			const std::vector<uint8_t> objBytes = {
+				'#', ' ', 'm', 'e', 's', 'h', '\n',
+				'v', ' ', '0', ' ', '1', ' ', '2', '\n',
+				'f', ' ', '1', ' ', '1', ' ', '1', '\n'
+			};
+
+			Assert::AreEqual(true, AssetSuite::MeshDecoders::WAVEFRONT == registry.ProbeMeshDecoder(".asset", objBytes.data(), objBytes.size()));
+
+			DestroyContextForCleanup(context);
+		}
+
+		TEST_METHOD(RuntimeCodecRegistryRejectsObjLabelsWithoutGeometry)
+		{
+			AssetSuite::ContextHandle context = nullptr;
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+
+			auto& registry = context->Runtime().CodecRegistry();
+			const std::vector<uint8_t> objLabelBytes = { 'o', ' ', 'n', 'a', 'm', 'e', '\n', 'g', ' ', 'g', 'r', 'o', 'u', 'p', '\n' };
+
+			Assert::AreEqual(true, AssetSuite::MeshDecoders::Auto == registry.ProbeMeshDecoder(".asset", objLabelBytes.data(), objLabelBytes.size()));
+
+			DestroyContextForCleanup(context);
+		}
+
+		TEST_METHOD(RuntimeCodecRegistryRejectsUnknownProbeBytes)
+		{
+			AssetSuite::ContextHandle context = nullptr;
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+
+			auto& registry = context->Runtime().CodecRegistry();
+			const std::vector<uint8_t> unknownBytes = { 0x00, 0x01, 0x02 };
+
+			Assert::AreEqual(true, AssetSuite::ImageDecoders::Auto == registry.ProbeImageDecoder(".asset", unknownBytes.data(), unknownBytes.size()));
+			Assert::AreEqual(true, AssetSuite::MeshDecoders::Auto == registry.ProbeMeshDecoder(".asset", unknownBytes.data(), unknownBytes.size()));
+			Assert::AreEqual(true, AssetSuite::ImageDecoders::Auto == registry.ProbeImageDecoder({}, nullptr, 0));
+			Assert::AreEqual(true, AssetSuite::MeshDecoders::Auto == registry.ProbeMeshDecoder({}, nullptr, 0));
+
+			DestroyContextForCleanup(context);
+		}
+
+		TEST_METHOD(RuntimeCodecRegistryRegistersPpmImageEncoder)
+		{
+			AssetSuite::ContextHandle context = nullptr;
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+
+			auto& registry = context->Runtime().CodecRegistry();
+
+			Assert::IsNotNull(registry.FindImageEncoder(AssetSuite::AssetFormat::PPM));
+			Assert::IsNull(registry.FindImageEncoder(AssetSuite::AssetFormat::Unknown));
+
+			DestroyContextForCleanup(context);
+		}
+
+		TEST_METHOD(RuntimeCodecRegistryUsesLatestRegisteredImplementations)
+		{
+			AssetSuite::ContextHandle context = nullptr;
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+
+			auto& registry = context->Runtime().CodecRegistry();
+			TestImageDecoder imageDecoder;
+			TestMeshDecoder meshDecoder;
+			TestImageEncoder imageEncoder;
+
+			Assert::IsTrue(registry.RegisterImageDecoder(AssetSuite::ImageDecoders::BMP, imageDecoder));
+			Assert::IsTrue(registry.RegisterMeshDecoder(AssetSuite::MeshDecoders::WAVEFRONT, meshDecoder));
+			Assert::IsTrue(registry.RegisterImageEncoder(AssetSuite::AssetFormat::PPM, imageEncoder));
+
+			Assert::IsTrue(registry.FindImageDecoder(AssetSuite::ImageDecoders::BMP) == &imageDecoder);
+			Assert::IsTrue(registry.FindMeshDecoder(AssetSuite::MeshDecoders::WAVEFRONT) == &meshDecoder);
+			Assert::IsTrue(registry.FindImageEncoder(AssetSuite::AssetFormat::PPM) == &imageEncoder);
+
+			DestroyContextForCleanup(context);
+		}
+
 	private:
 		struct LogCapture
 		{
@@ -713,16 +866,13 @@ namespace GeneralUnitTests
 	{
 	public:
 
-		TEST_METHOD(FileExtensionNotSupported)
+		TEST_METHOD(ImageUnsupportedExtensionUsesRecognizedSignature)
 		{
-			// In this test we don't need real data
-			std::vector<BYTE> output;
 			AssetSuite::Manager manager;
 
-			// This file needs to exist
 			manager.ImageLoad("test_file.xyz");
 			auto error = manager.ImageDecode(AssetSuite::ImageDecoders::Auto);
-			Assert::AreEqual(true, AssetSuite::ErrorCode::FileTypeNotSupported == error);
+			Assert::AreEqual(true, AssetSuite::ErrorCode::OK == error);
 		}
 
 		TEST_METHOD(ImageOpeningNonExistingFile)

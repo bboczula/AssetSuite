@@ -281,7 +281,10 @@ AssetSuite::ErrorCode AssetSuite::Manager::ImageDecode(ImageDecoders decoder)
 
       if (decoder == ImageDecoders::Auto)
       {
-            decoder = state.codecRegistry.ResolveImageDecoder(state.fileInfo.extension);
+            decoder = state.codecRegistry.ProbeImageDecoder(
+                  state.fileInfo.extension,
+                  state.rawBuffer.data(),
+                  state.rawBuffer.size());
             if (decoder == ImageDecoders::Auto)
             {
                   state.diagnostics.Add(ErrorCode::FileTypeNotSupported, "Image file type is not supported.");
@@ -361,7 +364,10 @@ AssetSuite::ErrorCode AssetSuite::Manager::MeshDecode(MeshDecoders decoder)
 
       if (decoder == MeshDecoders::Auto)
       {
-            decoder = state.codecRegistry.ResolveMeshDecoder(state.fileInfo.extension);
+            decoder = state.codecRegistry.ProbeMeshDecoder(
+                  state.fileInfo.extension,
+                  state.rawBuffer.data(),
+                  state.rawBuffer.size());
             if (decoder == MeshDecoders::Auto)
             {
                   state.diagnostics.Add(ErrorCode::FileTypeNotSupported, "Mesh file type is not supported.");

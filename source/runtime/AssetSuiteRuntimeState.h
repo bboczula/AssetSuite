@@ -13,6 +13,7 @@
 
 #include "../common/ImageDescriptor.h"
 #include "../common/ImageDecoder.h"
+#include "../common/ImageEncoder.h"
 #include "../common/MeshDecoder.h"
 #include "../common/AssetSuite.h"
 
@@ -89,16 +90,54 @@ namespace AssetSuite::Internal
 
 		struct CodecRegistry
 		{
-			bool RegisterImageDecoder(ImageDecoders decoder, ImageDecoder& implementation) noexcept;
-			bool RegisterMeshDecoder(MeshDecoders decoder, MeshDecoder& implementation) noexcept;
+			enum class AssetKind
+			{
+				Image,
+				Mesh
+			};
+
+			enum class Capability : uint32_t
+			{
+				Decode = 1u << 0,
+				Encode = 1u << 1
+			};
+
+			using ProbeCallback = bool (*)(const uint8_t* data, size_t size) noexcept;
+
+			struct CodecRecord
+			{
+				AssetKind assetKind = AssetKind::Image;
+				uint32_t capabilities = 0;
+				AssetFormat format = AssetFormat::Unknown;
+				ImageDecoders imageDecoder = ImageDecoders::Auto;
+				MeshDecoders meshDecoder = MeshDecoders::Auto;
+				std::vector<std::filesystem::path> extensions;
+				ProbeCallback probe = nullptr;
+				ImageDecoder* imageDecoderImplementation = nullptr;
+				MeshDecoder* meshDecoderImplementation = nullptr;
+				ImageEncoder* imageEncoderImplementation = nullptr;
+			};
+
+			bool RegisterImageDecoder(ImageDecoders decoder, ImageDecoder& implementation);
+			bool RegisterMeshDecoder(MeshDecoders decoder, MeshDecoder& implementation);
+			bool RegisterImageEncoder(AssetFormat format, ImageEncoder& implementation);
 			ImageDecoder* FindImageDecoder(ImageDecoders decoder) const noexcept;
 			MeshDecoder* FindMeshDecoder(MeshDecoders decoder) const noexcept;
+			ImageEncoder* FindImageEncoder(AssetFormat format) const noexcept;
 			ImageDecoders ResolveImageDecoder(const std::filesystem::path& extension) const noexcept;
 			MeshDecoders ResolveMeshDecoder(const std::filesystem::path& extension) const noexcept;
+			ImageDecoders ProbeImageDecoder(const std::filesystem::path& extension, const uint8_t* data, size_t size) const noexcept;
+			MeshDecoders ProbeMeshDecoder(const std::filesystem::path& extension, const uint8_t* data, size_t size) const noexcept;
+			const std::vector<CodecRecord>& Records() const noexcept;
 
 		private:
+			const CodecRecord* FindImageDecoderRecord(ImageDecoders decoder) const noexcept;
+			const CodecRecord* FindMeshDecoderRecord(MeshDecoders decoder) const noexcept;
+			const CodecRecord* FindImageEncoderRecord(AssetFormat format) const noexcept;
+
 			std::array<ImageDecoder*, static_cast<size_t>(ImageDecoders::MaxDecoders)> imageDecoders = {};
 			std::array<MeshDecoder*, static_cast<size_t>(MeshDecoders::MaxDecoders)> meshDecoders = {};
+			std::vector<CodecRecord> records;
 		};
 
 		struct CodecStorage
@@ -115,7 +154,7 @@ namespace AssetSuite::Internal
 			std::unique_ptr<PpmEncoder> ppmEncoder;
 			std::unique_ptr<BypassEncoder> bypassEncoder;
 
-			void RegisterWith(CodecRegistry& registry) noexcept;
+			void RegisterWith(CodecRegistry& registry);
 		};
 
 		struct FileInfo
