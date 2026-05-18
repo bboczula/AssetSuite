@@ -199,6 +199,7 @@ namespace GeneralUnitTests
 			AssertResultString(AssetSuite::Result::ErrorInvalidContext, "Error: invalid context");
 			AssertResultString(AssetSuite::Result::ErrorInvalidHandle, "Error: invalid handle");
 			AssertResultString(AssetSuite::Result::ErrorIoFailure, "Error: IO failure");
+			AssertResultString(AssetSuite::Result::ErrorMalformedData, "Error: malformed data");
 			AssertResultString(AssetSuite::Result::ErrorUnknown, "Error: unknown");
 		}
 
