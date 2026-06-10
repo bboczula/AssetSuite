@@ -837,6 +837,7 @@ namespace GeneralUnitTests
 		TEST_METHOD(RuntimeDiagnosticsEmitFileLoadLogs)
 		{
 			AssetSuite::ContextHandle context = nullptr;
+			AssetSuite::BlobHandle blob = nullptr;
 			AssetSuite::ImageHandle image = nullptr;
 			AssetSuite::MeshHandle mesh = nullptr;
 			LogCapture capture = {};
@@ -847,15 +848,21 @@ namespace GeneralUnitTests
 				AssetSuite::LogLevel::Error,
 				&capture));
 
-			Assert::AreEqual(true, AssetSuite::Result::ErrorFileNotFound == AssetSuite::DecodeImageFromFile(context, "missing_decode_image.bmp", &image));
+			Assert::AreEqual(true, AssetSuite::Result::ErrorFileNotFound == AssetSuite::LoadFile(context, "missing_blob_source.bin", &blob));
 			Assert::AreEqual(1, capture.callCount);
+			Assert::AreEqual(true, AssetSuite::LogLevel::Error == capture.lastLevel);
+			Assert::AreEqual(AssetSuite::Internal::Diagnostics::BlobLoadFailed, capture.lastMessage.c_str());
+
+			Assert::AreEqual(true, AssetSuite::Result::ErrorFileNotFound == AssetSuite::DecodeImageFromFile(context, "missing_decode_image.bmp", &image));
+			Assert::AreEqual(2, capture.callCount);
 			Assert::AreEqual(true, AssetSuite::LogLevel::Error == capture.lastLevel);
 			Assert::AreEqual(AssetSuite::Internal::Diagnostics::ImageLoadFailed, capture.lastMessage.c_str());
 
 			Assert::AreEqual(true, AssetSuite::Result::ErrorIoFailure == AssetSuite::DecodeMeshFromFile(context, std::filesystem::current_path().string().c_str(), &mesh));
-			Assert::AreEqual(2, capture.callCount);
+			Assert::AreEqual(3, capture.callCount);
 			Assert::AreEqual(true, AssetSuite::LogLevel::Error == capture.lastLevel);
 			Assert::AreEqual(AssetSuite::Internal::Diagnostics::MeshLoadFailed, capture.lastMessage.c_str());
+			Assert::IsNull(blob);
 			Assert::IsNull(image);
 			Assert::IsNull(mesh);
 
