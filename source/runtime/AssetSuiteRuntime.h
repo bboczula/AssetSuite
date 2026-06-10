@@ -36,6 +36,7 @@ namespace AssetSuite::Internal
 
 		void SetLoggingCallback(LoggingCallback callback, LogLevel minimumLevel, void* userData) noexcept;
 		void DispatchLogEvent(LogLevel level, const char* message) const;
+		void EmitDiagnostic(ErrorCode code, LogLevel level, const char* message);
 
 	private:
 		struct LoggingState

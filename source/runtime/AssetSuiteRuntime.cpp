@@ -294,3 +294,12 @@ void AssetSuite::Internal::RuntimeContext::DispatchLogEvent(LogLevel level, cons
 
 	logging.callback(level, message, logging.userData);
 }
+
+void AssetSuite::Internal::RuntimeContext::EmitDiagnostic(
+	ErrorCode code,
+	LogLevel level,
+	const char* message)
+{
+	Diagnostics().Add(code, message);
+	DispatchLogEvent(level, message);
+}
