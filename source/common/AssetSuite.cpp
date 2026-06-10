@@ -260,6 +260,7 @@ AssetSuite::Result AssetSuite::DecodeImageFromFile(ContextHandle context, const 
 	try
 	{
 		Internal::Blob blob(std::move(rawBytes), Internal::MakeBlobSourceMetadata(filePath));
+		// DecodeImageBlob owns probe/decode diagnostics so this wrapper does not duplicate them.
 		return context->Runtime().DecodeImageBlob(blob, outImage);
 	}
 	catch (const std::bad_alloc&)
@@ -325,6 +326,7 @@ AssetSuite::Result AssetSuite::DecodeMeshFromFile(ContextHandle context, const c
 	try
 	{
 		Internal::Blob blob(std::move(rawBytes), Internal::MakeBlobSourceMetadata(filePath));
+		// DecodeMeshBlob owns probe/decode diagnostics so this wrapper does not duplicate them.
 		return context->Runtime().DecodeMeshBlob(blob, outMesh);
 	}
 	catch (const std::bad_alloc&)
