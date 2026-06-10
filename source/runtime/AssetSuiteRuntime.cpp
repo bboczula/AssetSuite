@@ -1,4 +1,5 @@
 #include "AssetSuiteRuntime.h"
+#include "AssetSuiteRuntimeDiagnostics.h"
 
 #include <new>
 #include <utility>
@@ -158,20 +159,29 @@ AssetSuite::Result AssetSuite::Internal::RuntimeContext::DecodeImageBlob(
 		static_cast<size_t>(blob.ByteSize()));
 	if (decoder == ImageDecoders::Auto)
 	{
-		Diagnostics().Add(ErrorCode::FileTypeNotSupported, "Image blob format is not supported.");
+		EmitDiagnostic(
+			ErrorCode::FileTypeNotSupported,
+			LogLevel::Warning,
+			Diagnostics::UnsupportedImageFormat);
 		return Result::ErrorUnsupportedFormat;
 	}
 
 	if (!HasMinimumImageDecodeBytes(decoder, blob))
 	{
-		Diagnostics().Add(ErrorCode::Undefined, "Image blob is too small for the selected decoder.");
+		EmitDiagnostic(
+			ErrorCode::Undefined,
+			LogLevel::Error,
+			Diagnostics::ImageBlobTooSmall);
 		return Result::ErrorMalformedData;
 	}
 
 	ImageDecoder* imageDecoder = CodecRegistry().FindImageDecoder(decoder);
 	if (!imageDecoder)
 	{
-		Diagnostics().Add(ErrorCode::FileTypeNotSupported, "Image decoder is not registered.");
+		EmitDiagnostic(
+			ErrorCode::FileTypeNotSupported,
+			LogLevel::Warning,
+			Diagnostics::ImageDecoderMissing);
 		return Result::ErrorUnsupportedFormat;
 	}
 
@@ -179,7 +189,10 @@ AssetSuite::Result AssetSuite::Internal::RuntimeContext::DecodeImageBlob(
 	ImageDescriptor descriptor = {};
 	if (!imageDecoder->Decode(decodedBytes, const_cast<BYTE*>(reinterpret_cast<const BYTE*>(blob.Data())), descriptor))
 	{
-		Diagnostics().Add(ErrorCode::Undefined, "Image decoder rejected malformed data.");
+		EmitDiagnostic(
+			ErrorCode::Undefined,
+			LogLevel::Error,
+			Diagnostics::ImageDecodeRejected);
 		return MapSelectedDecoderFailure();
 	}
 
@@ -218,20 +231,29 @@ AssetSuite::Result AssetSuite::Internal::RuntimeContext::DecodeMeshBlob(
 		static_cast<size_t>(blob.ByteSize()));
 	if (decoder == MeshDecoders::Auto)
 	{
-		Diagnostics().Add(ErrorCode::FileTypeNotSupported, "Mesh blob format is not supported.");
+		EmitDiagnostic(
+			ErrorCode::FileTypeNotSupported,
+			LogLevel::Warning,
+			Diagnostics::UnsupportedMeshFormat);
 		return Result::ErrorUnsupportedFormat;
 	}
 
 	if (!HasMinimumMeshDecodeBytes(decoder, blob))
 	{
-		Diagnostics().Add(ErrorCode::Undefined, "Mesh blob is too small for the selected decoder.");
+		EmitDiagnostic(
+			ErrorCode::Undefined,
+			LogLevel::Error,
+			Diagnostics::MeshBlobTooSmall);
 		return Result::ErrorMalformedData;
 	}
 
 	MeshDecoder* meshDecoder = CodecRegistry().FindMeshDecoder(decoder);
 	if (!meshDecoder)
 	{
-		Diagnostics().Add(ErrorCode::FileTypeNotSupported, "Mesh decoder is not registered.");
+		EmitDiagnostic(
+			ErrorCode::FileTypeNotSupported,
+			LogLevel::Warning,
+			Diagnostics::MeshDecoderMissing);
 		return Result::ErrorUnsupportedFormat;
 	}
 
@@ -242,7 +264,10 @@ AssetSuite::Result AssetSuite::Internal::RuntimeContext::DecodeMeshBlob(
 	MeshDescriptor descriptor = {};
 	if (!meshDecoder->Decode(decodedBytes, decodeBuffer.data(), descriptor))
 	{
-		Diagnostics().Add(ErrorCode::Undefined, "Mesh decoder rejected malformed data.");
+		EmitDiagnostic(
+			ErrorCode::Undefined,
+			LogLevel::Error,
+			Diagnostics::MeshDecodeRejected);
 		return MapSelectedDecoderFailure();
 	}
 
