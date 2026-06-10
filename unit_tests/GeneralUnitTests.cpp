@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <fstream>
 #include <filesystem>
+#include <string>
 #include <utility>
 #include <vector>
 #include <Windows.h>
@@ -12,6 +13,7 @@
 #include "../source/common/AssetSuiteContext.h"
 #include "../source/runtime/AssetSuiteBlob.h"
 #include "../source/runtime/AssetSuiteRuntime.h"
+#include "../source/runtime/AssetSuiteRuntimeDiagnostics.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
@@ -374,7 +376,7 @@ namespace GeneralUnitTests
 
 			Assert::AreEqual(1, capture.callCount);
 			Assert::AreEqual(true, AssetSuite::LogLevel::Warning == capture.lastLevel);
-			Assert::AreEqual("registered", capture.lastMessage);
+			Assert::AreEqual("registered", capture.lastMessage.c_str());
 			Assert::IsTrue(&capture == capture.lastUserData);
 
 			DestroyContextForCleanup(context);
@@ -397,7 +399,7 @@ namespace GeneralUnitTests
 
 			Assert::AreEqual(2, capture.callCount);
 			Assert::AreEqual(true, AssetSuite::LogLevel::Error == capture.lastLevel);
-			Assert::AreEqual("error", capture.lastMessage);
+			Assert::AreEqual("error", capture.lastMessage.c_str());
 
 			DestroyContextForCleanup(context);
 		}
@@ -427,7 +429,7 @@ namespace GeneralUnitTests
 
 			Assert::AreEqual(0, firstCapture.callCount);
 			Assert::AreEqual(1, secondCapture.callCount);
-			Assert::AreEqual("replacement", secondCapture.lastMessage);
+			Assert::AreEqual("replacement", secondCapture.lastMessage.c_str());
 			Assert::IsTrue(&secondCapture == secondCapture.lastUserData);
 
 			DestroyContextForCleanup(context);
@@ -796,6 +798,137 @@ namespace GeneralUnitTests
 			DestroyContextForCleanup(context);
 		}
 
+		TEST_METHOD(RuntimeDiagnosticsEmitUnsupportedDecodeLogs)
+		{
+			const std::filesystem::path unsupportedPath = "unsupported_decode_payload.asset";
+			WriteBinaryFile(unsupportedPath, { 0x10, 0x20, 0x30, 0x40 });
+
+			AssetSuite::ContextHandle context = nullptr;
+			AssetSuite::BlobHandle blob = nullptr;
+			AssetSuite::ImageHandle image = nullptr;
+			AssetSuite::MeshHandle mesh = nullptr;
+			LogCapture capture = {};
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::SetLoggingCallback(
+				context,
+				&CaptureLogEvent,
+				AssetSuite::LogLevel::Warning,
+				&capture));
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::LoadFile(context, unsupportedPath.string().c_str(), &blob));
+
+			Assert::AreEqual(true, AssetSuite::Result::ErrorUnsupportedFormat == AssetSuite::DecodeImage(context, blob, &image));
+			Assert::AreEqual(1, capture.callCount);
+			Assert::AreEqual(true, AssetSuite::LogLevel::Warning == capture.lastLevel);
+			Assert::AreEqual(AssetSuite::Internal::Diagnostics::UnsupportedImageFormat, capture.lastMessage.c_str());
+			Assert::IsTrue(&capture == capture.lastUserData);
+
+			Assert::AreEqual(true, AssetSuite::Result::ErrorUnsupportedFormat == AssetSuite::DecodeMesh(context, blob, &mesh));
+			Assert::AreEqual(2, capture.callCount);
+			Assert::AreEqual(true, AssetSuite::LogLevel::Warning == capture.lastLevel);
+			Assert::AreEqual(AssetSuite::Internal::Diagnostics::UnsupportedMeshFormat, capture.lastMessage.c_str());
+			Assert::IsNull(image);
+			Assert::IsNull(mesh);
+
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::ReleaseBlob(context, &blob));
+			DestroyContextForCleanup(context);
+			std::filesystem::remove(unsupportedPath);
+		}
+
+		TEST_METHOD(RuntimeDiagnosticsEmitFileLoadLogs)
+		{
+			AssetSuite::ContextHandle context = nullptr;
+			AssetSuite::BlobHandle blob = nullptr;
+			AssetSuite::ImageHandle image = nullptr;
+			AssetSuite::MeshHandle mesh = nullptr;
+			LogCapture capture = {};
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::SetLoggingCallback(
+				context,
+				&CaptureLogEvent,
+				AssetSuite::LogLevel::Error,
+				&capture));
+
+			Assert::AreEqual(true, AssetSuite::Result::ErrorFileNotFound == AssetSuite::LoadFile(context, "missing_blob_source.bin", &blob));
+			Assert::AreEqual(1, capture.callCount);
+			Assert::AreEqual(true, AssetSuite::LogLevel::Error == capture.lastLevel);
+			Assert::AreEqual(AssetSuite::Internal::Diagnostics::BlobLoadFailed, capture.lastMessage.c_str());
+
+			Assert::AreEqual(true, AssetSuite::Result::ErrorFileNotFound == AssetSuite::DecodeImageFromFile(context, "missing_decode_image.bmp", &image));
+			Assert::AreEqual(2, capture.callCount);
+			Assert::AreEqual(true, AssetSuite::LogLevel::Error == capture.lastLevel);
+			Assert::AreEqual(AssetSuite::Internal::Diagnostics::ImageLoadFailed, capture.lastMessage.c_str());
+
+			Assert::AreEqual(true, AssetSuite::Result::ErrorIoFailure == AssetSuite::DecodeMeshFromFile(context, std::filesystem::current_path().string().c_str(), &mesh));
+			Assert::AreEqual(3, capture.callCount);
+			Assert::AreEqual(true, AssetSuite::LogLevel::Error == capture.lastLevel);
+			Assert::AreEqual(AssetSuite::Internal::Diagnostics::MeshLoadFailed, capture.lastMessage.c_str());
+			Assert::IsNull(blob);
+			Assert::IsNull(image);
+			Assert::IsNull(mesh);
+
+			DestroyContextForCleanup(context);
+		}
+
+		TEST_METHOD(RuntimeDiagnosticsRespectLogLevelFiltering)
+		{
+			const std::filesystem::path unsupportedPath = "filtered_decode_payload.asset";
+			const std::filesystem::path malformedImagePath = "filtered_malformed_decode_image.bmp";
+			WriteBinaryFile(unsupportedPath, { 0x10, 0x20, 0x30, 0x40 });
+			WriteBinaryFile(malformedImagePath, { 'B', 'M' });
+
+			AssetSuite::ContextHandle context = nullptr;
+			AssetSuite::BlobHandle unsupportedBlob = nullptr;
+			AssetSuite::BlobHandle malformedBlob = nullptr;
+			AssetSuite::ImageHandle image = nullptr;
+			LogCapture capture = {};
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::SetLoggingCallback(
+				context,
+				&CaptureLogEvent,
+				AssetSuite::LogLevel::Error,
+				&capture));
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::LoadFile(context, unsupportedPath.string().c_str(), &unsupportedBlob));
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::LoadFile(context, malformedImagePath.string().c_str(), &malformedBlob));
+
+			Assert::AreEqual(true, AssetSuite::Result::ErrorUnsupportedFormat == AssetSuite::DecodeImage(context, unsupportedBlob, &image));
+			Assert::AreEqual(0, capture.callCount);
+			Assert::AreEqual(true, AssetSuite::Result::ErrorMalformedData == AssetSuite::DecodeImage(context, malformedBlob, &image));
+			Assert::AreEqual(1, capture.callCount);
+			Assert::AreEqual(true, AssetSuite::LogLevel::Error == capture.lastLevel);
+			Assert::AreEqual(AssetSuite::Internal::Diagnostics::ImageBlobTooSmall, capture.lastMessage.c_str());
+
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::ReleaseBlob(context, &malformedBlob));
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::ReleaseBlob(context, &unsupportedBlob));
+			DestroyContextForCleanup(context);
+			std::filesystem::remove(malformedImagePath);
+			std::filesystem::remove(unsupportedPath);
+		}
+
+		TEST_METHOD(RuntimeDiagnosticsLogDecodeFromFileFailureOnce)
+		{
+			const std::filesystem::path malformedImagePath = "single_log_malformed_decode_image.bmp";
+			WriteBinaryFile(malformedImagePath, { 'B', 'M' });
+
+			AssetSuite::ContextHandle context = nullptr;
+			AssetSuite::ImageHandle image = nullptr;
+			LogCapture capture = {};
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::CreateContext(nullptr, &context));
+			Assert::AreEqual(true, AssetSuite::Result::Success == AssetSuite::SetLoggingCallback(
+				context,
+				&CaptureLogEvent,
+				AssetSuite::LogLevel::Trace,
+				&capture));
+
+			Assert::AreEqual(true, AssetSuite::Result::ErrorMalformedData == AssetSuite::DecodeImageFromFile(context, malformedImagePath.string().c_str(), &image));
+			Assert::AreEqual(1, capture.callCount);
+			Assert::AreEqual(true, AssetSuite::LogLevel::Error == capture.lastLevel);
+			Assert::AreEqual(AssetSuite::Internal::Diagnostics::ImageBlobTooSmall, capture.lastMessage.c_str());
+			Assert::IsNull(image);
+
+			DestroyContextForCleanup(context);
+			std::filesystem::remove(malformedImagePath);
+		}
+
 		TEST_METHOD(DecodeImageMapsMalformedRecognizedDataConsistently)
 		{
 			const std::filesystem::path malformedImagePath = "malformed_decode_image.bmp";
@@ -1071,7 +1204,7 @@ namespace GeneralUnitTests
 		{
 			int callCount;
 			AssetSuite::LogLevel lastLevel;
-			const char* lastMessage;
+			std::string lastMessage;
 			void* lastUserData;
 		};
 
@@ -1094,7 +1227,7 @@ namespace GeneralUnitTests
 			auto* capture = static_cast<LogCapture*>(userData);
 			++capture->callCount;
 			capture->lastLevel = level;
-			capture->lastMessage = message;
+			capture->lastMessage = message ? message : "";
 			capture->lastUserData = userData;
 		}
 	};

@@ -4,6 +4,7 @@
 #include "AssetSuiteContext.h"
 
 #include "../runtime/AssetSuiteRuntime.h"
+#include "../runtime/AssetSuiteRuntimeDiagnostics.h"
 #include "../runtime/AssetSuiteRuntimeState.h"
 #include "../wavefront/ModelLoader.h"
 #include "../bmp/BmpDecoder.h"
@@ -182,7 +183,10 @@ AssetSuite::Result AssetSuite::LoadFile(ContextHandle context, const char* fileP
 	const Result mappedResult = MapFileLoadResult(loadResult);
 	if (mappedResult != Result::Success)
 	{
-		context->Runtime().Diagnostics().Add(loadResult, "Failed to load blob source file.");
+		context->Runtime().EmitDiagnostic(
+			loadResult,
+			LogLevel::Error,
+			Internal::Diagnostics::BlobLoadFailed);
 		return mappedResult;
 	}
 
@@ -246,13 +250,17 @@ AssetSuite::Result AssetSuite::DecodeImageFromFile(ContextHandle context, const 
 	const Result mappedResult = MapFileLoadResult(loadResult);
 	if (mappedResult != Result::Success)
 	{
-		context->Runtime().Diagnostics().Add(loadResult, "Failed to load image source file.");
+		context->Runtime().EmitDiagnostic(
+			loadResult,
+			LogLevel::Error,
+			Internal::Diagnostics::ImageLoadFailed);
 		return mappedResult;
 	}
 
 	try
 	{
 		Internal::Blob blob(std::move(rawBytes), Internal::MakeBlobSourceMetadata(filePath));
+		// DecodeImageBlob owns probe/decode diagnostics so this wrapper does not duplicate them.
 		return context->Runtime().DecodeImageBlob(blob, outImage);
 	}
 	catch (const std::bad_alloc&)
@@ -308,13 +316,17 @@ AssetSuite::Result AssetSuite::DecodeMeshFromFile(ContextHandle context, const c
 	const Result mappedResult = MapFileLoadResult(loadResult);
 	if (mappedResult != Result::Success)
 	{
-		context->Runtime().Diagnostics().Add(loadResult, "Failed to load mesh source file.");
+		context->Runtime().EmitDiagnostic(
+			loadResult,
+			LogLevel::Error,
+			Internal::Diagnostics::MeshLoadFailed);
 		return mappedResult;
 	}
 
 	try
 	{
 		Internal::Blob blob(std::move(rawBytes), Internal::MakeBlobSourceMetadata(filePath));
+		// DecodeMeshBlob owns probe/decode diagnostics so this wrapper does not duplicate them.
 		return context->Runtime().DecodeMeshBlob(blob, outMesh);
 	}
 	catch (const std::bad_alloc&)
