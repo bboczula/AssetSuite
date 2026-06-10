@@ -67,6 +67,14 @@ persistent public `BlobHandle`.
 
 The public SDK adapter maps `NonExistingFile` to `Result::ErrorFileNotFound` and `IoFailure` to `Result::ErrorIoFailure`. Text-mode loads append a null terminator after successful reads; binary loads preserve the exact file bytes.
 
+## Diagnostics And Logging
+
+Runtime probe, decode, and file-load failures record private diagnostics and may emit one callback log event through the registered logging callback. Callback messages use stable internal `ASSET_*` prefixes, but diagnostic storage and runtime error details remain private implementation state.
+
+Decode-from-file wrappers own file-load diagnostics only. Once bytes are wrapped in a temporary blob, `DecodeImageBlob` and `DecodeMeshBlob` own probe/decode diagnostics so a single public failure path does not log the same failure twice.
+
+This story keeps cleanup scope limited to cleanup that occurs inside failed file/decode wrapper flows. Explicit invalid cleanup API calls such as failed `ReleaseBlob`, `ReleaseImage`, `ReleaseMesh`, and repeated `DestroyContext` validation remain non-logging paths unless a later story expands that behavior.
+
 ## Deferred Scope
 
 This runtime layer is intentionally foundational. The following work is deferred to later stories:
